@@ -1,208 +1,383 @@
 #!/usr/bin/env python
-# Thou shalt use a fixed tab size of 8
+#Let's keep this file in particular as clean and neatly organized as possible.
+#If this is nice and organized, then writing new modules will be a snap and this
+#file should rarely have to be edited.
 
 import irclib_scrappy
-import sys
-from optparse import OptionParser
+import sys, os
+import traceback
+import thread, threading
 
+################################################################################
+#set to False to turn off debugging to stdout
 DEBUG = True
 
 def debug(msg):
-    if DEBUG:
-        print msg
+	if DEBUG:
+		print msg
+
+################################################################################
+
+
+#this is our main bot class.  Once scrappy.py is called, an instance of this
+#class (our bot) gets created and some initialization is done.  The real work is
+#done via modules that get loaded here.
 class scrappy:
-    def __init__(self):
-        debug("Scrappy bot started.")
-        self.cmdchar = '!'
-        self.nickname = 'thetan'
-        self.username = 'xenu'
-        self.realname = 'xenu'
-        self.nickservpass = ''
-        self.identify = False
-        self.server = ''
-        self.port = 6667
-        self.chanlist = []
-        self.irc = '' #this will be the socket
-        self.c = '' #Thomas, explain this to me later
-
-        #testvar, should be gotten rid of
-        self.configing = False
-
-        #Experimental stuff for dynamic modules
-        #FIXME XXX FIXME XXX
-        #probably need to completely redo this mharrison
-        self.modulelist = []
-        self.privmsg_events = []
-        self.pubmsg_events = []
-        self.onload_events = []
-        self.onquit_events = []
-        #self.what_other_events? = []
-
-        #load modules(currently in main())
-        sys.path.append("modules/")
-        #self.load_module("config")
-        #self.load_module("core")
-
-        #start the bot
-        self.__main()
-
-    def parse_argv(self):
-        """Parse the commandline args and print a usage message if incorrect."""
-        parser = OptionParser()
-        parser.add_option("--ssl", action="store_true",
-                help="Enable SSL support")
-        parser.add_option("--server", action="store", type="string",
-                help="Server to connect to", metavar="SERVER")
-        parser.add_option("--port", action="store", type="int",
-                help="Port to connect to. Defaults to 6667 or 6697 for SSL.")
-        parser.add_option("--nick", action="store", type="string",
-                help="Nickname for the bot")
-
-        (options, args) = parser.parse_args()
-
-        #remaining args are channels
-        for ch in args:
-            self.chanlist.append('#%s' % ch)
-
-    def __main(self):
-        self.parse_argv()
-        self.irc = irclib_scrappy.IRC()
-
-        try:
-            self.c = self.irc.server().connect(self.server,
-                self.port, self.nickname,
-                username=self.username, ircname=self.realname)
-        except irclib_scrappy.ServerConnectionError, x:
-            print x
-            sys.exit(1)
-
-        #if all goes well, register handlers
-        self.c.add_global_handler("welcome", self.on_connect)
-        self.c.add_global_handler("disconnect", self.on_disconnect)
-        self.c.add_global_handler("privmsg", self.on_privmsg)
-        self.c.add_global_handler("pubmsg", self.on_pubmsg)
-
-        #register some events
-        self.register_msg_event(modload_cmd)
-        self.register_msg_event(modlist_cmd)
-
-        self.list_modules()
-
-        #nothng after this executes
-        self.irc.process_forever()
-
-    ##################
-    #Event Processing#
-    ##################
-    def register_privmsg_event(self, func):
-            self.privmsg_events.append(func)
-
-    def register_pubmsg_event(self, func):
-            self.pubmsg_events.append(func)
-
-    #Convenience function, registers the func
-    #for both privmsgs and pubmsgs
-    def register_msg_event(self, func):
-            self.register_privmsg_event(func)
-            self.register_pubmsg_event(func)
-
-    def register_onload_event(self, func):
-            self.onload_events.append(func)
-
-    def register_onquit_event(self, func):
-            self.onquit_events.append(func)
-
-    ################
-    #Event Handlers#
-    ################
-    def on_connect(self, c, event):
-            for ch in self.chanlist:
-                    if irclib_scrappy.is_channel(ch):
-                            c.join(ch)
-
-            if self.identify == True:
-                self.c.privmsg("nickserv", "identify %s" % self.nickservpass)
-
-    #FIXME XXX
-    #XXX FIXME
-    #This needs to be completely redone in a clean way, not just passing
-    #lists of crap to our handlers
-    def on_pubmsg(self, c, event):
-            arg = event.arguments()[0]
-            iscmd = False
-
-            nick = irclib_scrappy.nm_to_n(event.source())
-            user = irclib_scrappy.nm_to_u(event.source())
-            host = irclib_scrappy.nm_to_h(event.source())
-
-            debug(nick)
-
-            if arg[0] == self.cmdchar:
-                    cmd = arg[1:]
-                    iscmd = True
-            else:
-                    cmd = arg
-
-            #dispatch the command
-            for func in self.pubmsg_events:
-                    func(c, [nick, user, host, iscmd, cmd, event.target()], self)
-
-    def on_privmsg(self, c, event):
-            cmd = event.arguments()[0]
-            iscmd = False
-
-            nick = irclib_scrappy.nm_to_n(event.source())
-            user = irclib_scrappy.nm_to_u(event.source())
-            host = irclib_scrappy.nm_to_h(event.source())
-
-            if cmd[0] == self.cmdchar:
-                    c.privmsg(nick, "You privmsged me, you don't need to " +
-                    "prefix commands with %s" % self.cmdchar)
-                    cmd = cmd[1:]
-
-            iscmd = True
-
-            #dispatch the command
-            for func in self.privmsg_events:
-                    func(c, [nick, user, host, iscmd, cmd, event.target()], self)
+	def __init__(self):
+		debug("Scrappy bot started.")
+		#hard-code these for now
+		#then write a config loading module
+		self.cmdchar = '!'
+		self.nickname = 'scrappy'
+		self.username = 'scrappy'
+		self.realname = 'Scrappy Bot'
+		self.server = ''
+		self.port = 6667
+		self.chanlist = []
+		self.ircsock = '' #this will be the socket
+		self.connection = '' #Thomas, explain this to me later
+		self.lock = threading.Lock()
 
 
-    def on_disconnect(self, c, event):
-            for func in self.onquit_events:
-                    func()
+		#our event lists.
+		#each module adds functions to be called to these events.
+		#each event handler calls all of the functions within its list.
+		self.events = ["connect", "disconnect", "error", "invite",
+		"join", "kick", "load", "mode", "msg", "part", "ping", "pong",
+		"privmsg", "privnotice", "pubmsg", "pubnotice", "quit"]
+		self.modulelist = []
+		self.connect_events = []
+		self.disconnect_events = []
+		self.error_events = []
+		self.invite_events = []
+		self.join_events = []
+		self.kick_events = []
+		self.load_events = []
+		self.mode_events = []
+		self.msg_events = {}
+		self.part_events = []
+		self.ping_events = []
+		self.pong_events = []
+		self.privmsg_events = {}
+		self.privnotice_events = []
+		self.pubmsg_events = {}
+		self.pubnotice_events = []
+		self.quit_events = [] #for other users quitting, not the bot
+		#self.what_other_events? = []
 
-            sys.exit(0)
+		sys.path.append(os.path.join(os.getcwd(), "modules"))
+		#need to load a few modules here - the rest are done elsewhere
+		self.load_module("modmanage")
+		self.load_module("core")
+		#self.load_module("config")
 
-    def on_load(self):
-            for func in self.onload_events:
-                    func(self)
+		#self.register_onload_event(loadme)
 
-    ################
-    #Module Loading#
-    ################
-    #FIXME This needs to be redone as well
-    def load_module(self, name):
-            #maybe we should keep the module around?
-            try:
-                    module = __import__("%s" % name)
-            except ImportError:
-                    #should be error output
-                    print "No such module\n"
-                    return
+		#on_load event
+		#self.on_load()
 
-            module.__init__(self)
-            self.register_module(name, 'foo', 'foo')
+		#start the bot
+		self.__main()
+	########################################################################
+	def parse_argv(self):
+		"""Parse the commandline args and print a usage message if incorrect."""
+		if len(sys.argv) < 3: #Need at least server
+			self.print_usage()
+			sys.exit(1)
 
-    def register_module(self, name, eventlist, function):
-            self.modulelist.append(name)
+		#split out the port if specified
+		s = sys.argv[1].split(":", 1)
+		self.server = s[0]
 
-    def list_modules(self):
-            """List currently loaded modules."""
-            print "Currently loaded modules:"
-            for mod in self.modulelist:
-                    print mod
+		#a port is given
+		if len(s) == 2:
+			try:
+				self.port = int(s[1])
+			except ValueError:
+				print "Error: Erroneous port."
+				sys.exit(1)
+
+		self.nickname = sys.argv[2]
+		#add channels to chanlist
+		for ch in sys.argv[3:]:
+			self.chanlist.append('#%s' % ch)
+
+	def print_usage(self):
+		print 'Usage: %s <server[:port]> <nickname> [channel 1 channel 2 ... channelN]' % sys.argv[0]
+
+	########################################################################
+	def __main(self):
+		"""The real work.  Initialize our connection and register events."""
+		#parse comamnd line and create a new socket
+		self.parse_argv()
+		self.ircsock = irclib_scrappy.IRC()
+
+		#attempt to create a socket and connect to the server
+		try:
+			self.connection = self.ircsock.server().connect(self.server,
+					self.port, self.nickname,
+					username=self.username,ircname=self.realname)
+		#connection failed, print error and exit
+		except irclib_scrappy.ServerConnectionError, x:
+			print x
+			sys.exit(1)
+
+		#if all goes well, register handlers
+		self.connection.add_global_handler("welcome", self.on_connect)
+		self.connection.add_global_handler("disconnect", self.on_disconnect)
+		self.connection.add_global_handler("error", self.on_error)
+		self.connection.add_global_handler("invite", self.on_invite)
+		self.connection.add_global_handler("join", self.on_join)
+		self.connection.add_global_handler("kick", self.on_kick)
+		self.connection.add_global_handler("mode", self.on_mode)
+		self.connection.add_global_handler("part", self.on_part)
+		self.connection.add_global_handler("ping", self.on_ping)
+		self.connection.add_global_handler("pong", self.on_pong)
+		self.connection.add_global_handler("privmsg", self.on_privmsg)
+		self.connection.add_global_handler("privnotice", self.on_privnotice)
+		self.connection.add_global_handler("pubmsg", self.on_privmsg)
+		self.connection.add_global_handler("quit", self.on_quit)
+
+
+		#self.list_modules()
+
+		#enter main event loop after this
+		#no code after here
+		try:
+			self.ircsock.process_forever()
+		except KeyboardInterrupt:
+			self.connection.quit("Keyboard interrupt!")
+
+
+	########################################################################
+	###################
+	#Event Registering#
+	###################
+
+	def register_event(self, modname, event_type, func):
+		"""Call this with an event_type and a function to call when that event_type happens."""
+		#list of legal event types
+		#keep in ABC order
+
+		if not event_type in self.events:
+			debug("I don't know what an %s event is." % event_type)
+			return
+
+		#event type is good.  Add it to appropriate event list
+
+
+		#BUGGY NONWORKING STUFF
+
+		listname = "self."+event_type+"_events"
+		#debug(func.__name__)
+		#if func.__name__ in eval(listname):
+		#	debug("%s already exists in %s! Removing old copy and inserting this..." % (func, listname))
+		#	eval(listname).remove(func.__name__)
+
+		eval(listname).setdefault(modname, set()).add(func)
+		if event_type == "msg":
+			#self.privmsg_events.append(func)
+			#self.pubmsg_events.append(func)
+			self.privmsg_events.setdefault(modname, set()).add(func)
+			self.pubmsg_events.setdefault(modname, set()).add(func)
+
+
+	def unregister_event(self, event_type, func):
+		pass
+	
+			
+
+
+	########################################################################
+	##################
+	#Event Handlers  #
+	##################
+
+	def on_connect(self, conn, eventlist):
+		"""Called when bot makes a connection to the server."""
+		#do all of our events
+		for func in self.connect_events:
+			thread.start_new_thread(func)
+
+		#if self.identify == True:
+		#	conn.privmsg("nickserv", "identify %s"
+		#		% self.nickservpass)
+
+		#join channels
+		for chan in self.chanlist:
+			if irclib_scrappy.is_channel(chan):
+				conn.join(chan)
+
+	########################################################################
+	def on_disconnect(self, conn, eventlist):
+		"""Called when the connection to the server is closed."""
+		for func in self.disconnect_events:
+			thread.start_new_thread(func)
+		conn.quit("Scrappy bot signing off.")
+		#do we need to clean stuff up?
+		sys.exit(0)
+
+	########################################################################
+	def on_error(self, conn, eventlist):
+		debug("Error received: %s" % eventlist.arguments())
+		for func in self.error_events:
+			thread.start_new_thread(func)
+
+
+	########################################################################
+	def on_invite(self, conn, eventlist):
+		debug("Received an invite: %s" % eventlist.arguments())
+		for func in self.invite_events:
+			thread.start_new_thread(func)
+
+	########################################################################
+	def on_join(self, conn, eventlist):
+		debug("User joined: %s" % eventlist.arguments())
+		for func in self.join_events:
+			thread.start_new_thread(func)
+
+	########################################################################
+	def on_kick(self, conn, eventlist):
+		debug("Someone was kicked: %s" % eventlist.arguments())
+		for func in self.kick_events:
+			thread.start_new_thread(func)
+
+	########################################################################
+	def on_mode(self, conn, eventlist):
+		debug("Mode change: %s" % eventlist.arguments())
+		for func in self.mode_events:
+			thread.start_new_thread(func)
+
+	########################################################################
+	def on_part(self, conn, eventlist):
+		debug("Part: %s" % eventlist.arguments())
+		for func in self.part_events:
+			thread.start_new_thread(func)
+
+	########################################################################
+	def on_ping(self, conn, eventlist):
+		debug("Ping: %s" % eventlist.arguments())
+		for func in self.ping_events:
+			thread.start_new_thread(func)
+
+	########################################################################
+	def on_pong(self, conn, eventlist):
+		debug("Pong: %s" % eventlist.arguments())
+		for func in self.pong_events:
+			thread.start_new_thread(func)
+
+	########################################################################
+	def on_privmsg(self, conn, eventlist):
+		"""Called when bot receives a private or channel (public) message."""
+		#eventlist.arguments() = the message body
+		arg = eventlist.arguments()[0]
+
+		iscmd = False #?
+
+		nick = irclib_scrappy.nm_to_n(eventlist.source())
+		user = irclib_scrappy.nm_to_u(eventlist.source())
+		host = irclib_scrappy.nm_to_h(eventlist.source())
+
+		if arg[0] == self.cmdchar:
+			cmd = arg[1:]
+			iscmd = True
+		else:
+			cmd = arg
+
+		#how can we make the list that's passed to functions more friendly?
+		#we end up parsing the list again in the called function...
+		#for func in self.privmsg_events:
+		#	thread.start_new_thread(func, (conn, [nick, user, host, iscmd, cmd, eventlist.target()], self))
+		for funcs in self.privmsg_events.itervalues():
+			for f in funcs:
+				thread.start_new_thread(f, (conn, [nick, user, host, iscmd, cmd, eventlist.target()], self))
+
+
+	########################################################################
+	def on_privnotice(self, conn, eventlist):
+		debug("Privnotice: %s" % eventlist.arguments())
+		for func in self.privnotice_events:
+			thread.start_new_thread(func)
+
+
+
+	########################################################################
+	#right now this isn't used because it's assumed that privmsg == pubmsg
+	#this should probably be changed...
+	def on_pubmsg(self, conn, eventlist):
+		debug("Pubmsg: % " % eventlist.arguments())
+		for func in self.pubmsg_events:
+			func()
+
+	########################################################################
+	def on_quit(self, conn, eventlist):
+		debug("Quit: %s" % eventlist.arguments())
+		for func in self.quit_events:
+			thread.start_new_thread(func)
+
+
+	################
+	#Module Loading#
+	################
+	def load_module(self,name):
+		try:
+			self.modulelist.index(name)
+			#module is already loaded
+			return self.reload_module(name)
+		except ValueError:
+			debug("Not Reloading")
+			try:
+				exec("from %s import %s" % (name, name))
+			#module = __import__(name)
+			#debug("Loading %s" % name)
+			except ImportError:
+				#should be error output
+				print "No such module\n"
+				print traceback.print_exc()
+				return "Sorry, there was an error loading %s." % name
+			debug("This should only print once")
+			debug(eval(name).init(self))
+			self.register_module(name,'foo','foo')
+			return "Loaded %s." % name
+		
+	def reload_module(self, name):
+		debug("Module already loaded, reloading.")
+		self.unload_module(name)
+		reload(sys.modules[name])
+		self.register_module(name, 'foo', 'foo')
+		debug(eval(name).init(self))
+		return "Reloaded %s." % name
+
+	def unload_module(self, name):
+		self.lock.acquire()
+		try:
+			self.modulelist.index(name)
+		except:
+			print "No such module!"
+			self.lock.release()
+			return "Sorry, no module named %s is loaded." % name
+		self.unregister_module(name)
+		self.lock.release()
+		return "%s unloaded." % name
+
+	def register_module(self, name, eventlist, function):
+		self.modulelist.append(name)
+
+	def unregister_module(self, name):
+		self.modulelist.remove(name)
+		self.msg_events.pop(name)
+		self.privmsg_events.pop(name)
+		self.pubmsg_events.pop(name)
+
+
+
+	def list_modules(self):
+		"""List currently loaded modules."""
+		print "Currently loaded modules:"
+		for mod in self.modulelist:
+			print mod
 
 
 if(__name__ == "__main__"):
-    bot = scrappy()
+	bot = scrappy()
 

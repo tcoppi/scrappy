@@ -1,0 +1,18 @@
+# Module that implements config file functionality for scrappy
+
+import sys
+
+def init(scrap):
+	print "Loading Configuration\n"
+	scrap.configing = True
+
+	#replace these with whatever your bot
+	#username and password are
+	scrap.username = "XeNu"
+	scrap.nickservpass = "121213"
+
+	#identify with nickserv or not
+	scrap.identify = True
+	scrap.talk = True
+	scrap.autorep = True
+

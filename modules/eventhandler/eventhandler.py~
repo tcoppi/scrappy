@@ -1,0 +1,32 @@
+# Event handlers
+
+def init(bot):
+	#our event lists.
+	#each module adds functions to be called to these events.
+	#each event handler calls all of the functions within its list.
+	bot.events = ["connect", "disconnect", "error", "invite",
+	"join", "kick", "load", "mode", "msg", "part", "ping", "pong",
+	"privmsg", "privnotice", "pubmsg", "pubnotice", "quit"]
+		
+	
+	bot.connect_events = []
+	bot.disconnect_events = []
+	bot.error_events = []
+	bot.invite_events = []
+	bot.join_events = []
+	bot.kick_events = []
+	bot.load_events = []
+	bot.mode_events = []
+	bot.msg_events = {}
+	bot.part_events = []
+	bot.ping_events = []
+	bot.pong_events = []
+	bot.privmsg_events = {}
+	bot.privnotice_events = []
+	bot.pubmsg_events = {}
+	bot.pubnotice_events = []
+	bot.quit_events = [] #for other users quitting, not the bot
+	#bot.what_other_events? = []
+	
+def add_handlers(bot):
+	print "added handler"

@@ -1,0 +1,43 @@
+from time import sleep
+
+def __init__(scrap):
+	scrap.register_msg_event(testmultii)
+	scrap.register_msg_event(haicoppi)
+	scrap.register_msg_event(haiomega)
+	scrap.register_msg_event(hailandon)
+	scrap.register_msg_event(sosleepy)
+	scrap.register_onload_event(testmulti)
+	
+	
+def testmultii(c, list, bot):
+	cmd = list[4].split(" ")[0]
+	if cmd == "testmulti":
+		c.privmsg(list[5], "Sleeping for 5 seconds, yaaawn.")
+		
+def haicoppi(c, list, bot):
+	cmd = list[4].split(" ")[0]
+	if cmd == "testmulti":
+		c.privmsg("tcoppi", "Ohai")
+		
+def haiomega(c, list, bot):
+	cmd = list[4].split(" ")[0]
+	if cmd == "testmulti":
+		c.privmsg("[mharrison]", "Ohai")
+		
+def hailandon(c, list, bot):
+	cmd = list[4].split(" ")[0]
+	if cmd == "testmulti":
+		c.privmsg("Landon", "Ohai")
+		
+def sosleepy(c, list, bot):
+	cmd = list[4].split(" ")[0]
+	if cmd == "testmulti":
+		sleep(5)
+		c.privmsg(list[5], "Yawn, I'm awake now!")
+		
+def testmulti(bot):
+	bot.unregister_event(msg, "testmulti")
+	bot.unregister_event(msg, "haicoppi")
+	bot.unregister_event(msg, "haiomega")
+	bot.unregister_event(msg, "hailandon")
+	bot.unregister_event(msg, "sosleepy")
