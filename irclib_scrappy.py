@@ -380,7 +380,7 @@ class ServerConnection(Connection):
         self.socket = None
 
     def connect(self, server, port, nickname, password=None, username=None,
-                ircname=None, localaddress="", localport=0, ssl=False):
+                ircname=None, localaddress="", localport=0):
         """Connect/reconnect to a server.
 
         Arguments:
@@ -425,8 +425,7 @@ class ServerConnection(Connection):
         try:
             self.socket.bind((self.localaddress, self.localport))
             self.socket.connect((self.server, self.port))
-            if ssl:
-                self.ssl_sock = socket.ssl(self.socket)
+            self.ssl_sock = socket.ssl(self.socket)
         except socket.error, x:
             self.socket.close()
             self.socket = None
@@ -481,8 +480,7 @@ class ServerConnection(Connection):
         """[Internal]"""
 
         try:
-#            new_data = self.socket.recv(2**14)
-	    new_data = self.ssl_sock.read(2**14)
+            new_data = self.ssl_sock.read(2**14)
         except socket.error, x:
             # The server hung up.
             self.disconnect("Connection reset by peer")
@@ -783,8 +781,7 @@ class ServerConnection(Connection):
         if self.socket is None:
             raise ServerNotConnectedError, "Not connected."
         try:
-	#    self.socket.send(string + "\r\n")
-	    self.ssl_sock.write(string + "\r\n")
+            self.ssl_sock.write(string + "\r\n")
             if DEBUG:
                 print "TO SERVER:", string
         except socket.error, x:
