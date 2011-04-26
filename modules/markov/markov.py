@@ -64,21 +64,21 @@ def markov_stats(c, list, bot):
 #loads in a previously pickled saved state
 def markov_load(c, list, bot):
     global statetab
-        global lock
+    global lock
 
-        cmd = list[4].split(" ")[0]
+    cmd = list[4].split(" ")[0]
 
-        if cmd == "mkload":
-            fp = list[4].split(" ")[1]
+    if cmd == "mkload":
+        fp = list[4].split(" ")[1]
 
-                lock.acquire()
-                try:
-                    pkfile = open(fp, "r")
-                        statetab = pickle.load(pkfile)
-                except IOError:
-                    print "Could not load db: Doesn't exist\n"
+        lock.acquire()
+        try:
+            pkfile = open(fp, "r")
+            statetab = pickle.load(pkfile)
+        except IOError:
+            print "Could not load db: Doesn't exist\n"
 
-                lock.release()
+        lock.release()
 
 
 #pickles out the state to a file
@@ -101,49 +101,48 @@ def markov_dump(c, list, bot):
 
 def markov_file(c, list, bot):
     """Load a plaintext file."""
-        cmd = list[4].split(" ")[0]
+    cmd = list[4].split(" ")[0]
 
-        if cmd == "markov_file":
-            global lock
-                mfname = list[4].split(" ")[1]
+    if cmd == "markov_file":
+        global lock
+        mfname = list[4].split(" ")[1]
 
-                lock.acquire()
-                try:
-                    mf = open(mfname, 'r')
-                except IOError:
-                    c.privmsg(list[5], "Error loading file %s." % mfname)
-                        lock.release()
-                        return
+        lock.acquire()
+        try:
+            mf = open(mfname, 'r')
+        except IOError:
+            c.privmsg(list[5], "Error loading file %s." % mfname)
+            lock.release()
+            return
 
-                c.privmsg(list[5], "%s successfully opened.  Reading..." % mfname)
-                for line in mf.readlines():
-                    words = [x.strip() for x in line.split(" ") if not x.isspace()]
-                        if len(words) <= 1:
-                            lock.release()
-                                return
-
-                        global statetab
-                        global w1
-                        global w2
-
-                        w1 = w2 = "\n"
-
-                        for w in words:
-                            statetab.setdefault((w1, w2), []).append(w)
-                                w1, w2 = w2, w
-
-                        statetab.setdefault((w1, w2), []).append("\n")
-
-                c.privmsg(list[5], "Done!")
-                mf.close()
+        c.privmsg(list[5], "%s successfully opened.  Reading..." % mfname)
+        for line in mf.readlines():
+            words = [x.strip() for x in line.split(" ") if not x.isspace()]
+            if len(words) <= 1:
                 lock.release()
+                return
 
-                lock.acquire()
-                pkfile = open("%s.mk" % mf, "w+")
+            global statetab
+            global w1
+            global w2
 
-                pickle.dump(statetab, pkfile)
-                lock.release()
+            w1 = w2 = "\n"
 
+            for w in words:
+                statetab.setdefault((w1, w2), []).append(w)
+                w1, w2 = w2, w
+
+            statetab.setdefault((w1, w2), []).append("\n")
+
+        c.privmsg(list[5], "Done!")
+        mf.close()
+        lock.release()
+
+        lock.acquire()
+        pkfile = open("%s.mk" % mf, "w+")
+
+        pickle.dump(statetab, pkfile)
+        lock.release()
 
 
 def markov_learn(c, list, bot):
@@ -153,12 +152,13 @@ def markov_learn(c, list, bot):
     cmd = list[4].split(" ")[0]
     if cmd == "talk" or cmd == "markov_stats" or cmd == "mkload" or cmd == "mkdump":
         return
+
     lock.acquire()
 
     words = [x.lower().strip() for x in list[4].split(" ") if not x.isspace()]
     if len(words) <= 1:
         lock.release()
-            return
+        return
 
     global statetab
     global w1
@@ -184,7 +184,7 @@ def markov_learn(c, list, bot):
 
         if len(tmp) <= 2:
             lock.release()
-                return
+            return
 
         c.privmsg(list[5], "%s: %s" % (list[0], tmp))
         lock.release()
@@ -258,6 +258,6 @@ def markov_talk(c, list, bot):
 def tweet(c, args, bot):
     cmd = args[4].split(" ")[0]
 
-        if cmd == "tweet":
-            api.PostUpdate(last)
-                c.privmsg(args[5], "Updated Twitter with message: %s" % last)
+    if cmd == "tweet":
+        api.PostUpdate(last)
+        c.privmsg(args[5], "Updated Twitter with message: %s" % last)
