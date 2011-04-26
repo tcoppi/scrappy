@@ -17,6 +17,10 @@ import twitter
 api = None
 twitteruser = 'scrappybot'
 twitterpass = 'scrappyb0t'
+consumer_key = 'N2q3Owp3hRqDebYcoJN0Q'
+consumer_secret ='fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE'
+access_token_key = 'access_token'
+access_token_secret = 'access_token_secret'
 
 nickmatch = None
 statetab = {}
@@ -30,6 +34,8 @@ def init(scrap):
     global api
 
     lock = threading.Lock()
+    scrap.autorep = True
+    scrap.talk = True
 
     scrap.register_event("markov", "msg", markov_learn)
     scrap.register_event("markov", "msg", markov_file)
@@ -37,14 +43,14 @@ def init(scrap):
     scrap.register_event("markov", "msg", markov_load)
     scrap.register_event("markov", "msg", markov_dump)
     scrap.register_event("markov", "msg", markov_stats)
-    scrap.register_event("markov", "msg", tweet)
+    #scrap.register_event("markov", "msg", tweet)
 
     nickmatch = re.compile(scrap.nickname)
 
     random.seed()
     
-    api = twitter.Api(username=twitteruser, password=twitterpass)
-
+    #api = twitter.Api(username=twitteruser, password=twitterpass)
+    #api = twitter.Api(consumer_key=consumer_key, consumer_secret=consumer_secret)#, access_token_key=access_token, access_token_secret=access_token_secret)
 
 def markov_stats(c,list,bot):
     global statetab
@@ -57,23 +63,22 @@ def markov_stats(c,list,bot):
 
 #loads in a previously pickled saved state
 def markov_load(c,list,bot):
-    global statetab
-    global lock
+	global statetab
+	global lock
 
-    cmd = list[4].split(" ")[0]
+	cmd = list[4].split(" ")[0]
 
-    if cmd == "mkload":
-	fp = list[4].split(" ")[1]
+	if cmd == "mkload":
+		fp = list[4].split(" ")[1]
 
-	lock.acquire()
-	try:
-		pkfile = open(fp,"r")
-		statetab = pickle.load(pkfile)
-		lock.release()
-	except IOError:
-	    print "Could not load db: Doesn't exist\n"
+		lock.acquire()
+		try:
+			pkfile = open(fp,"r")
+			statetab = pickle.load(pkfile)
+		except IOError:
+			print "Could not load db: Doesn't exist\n"
 	    
-	lock.release()
+		lock.release()
 
 
 #pickles out the state to a file
