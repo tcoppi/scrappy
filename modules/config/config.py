@@ -13,7 +13,6 @@ def init(scrap):
 	scrap.chanlist = ["#scrappy"]
 	
 	#modules to load on startup
-	scrap.startup = []
-	
-	print "THIS SHOULD NOT WORK"
+	scrap.startup = ["markov"]
+
 	
