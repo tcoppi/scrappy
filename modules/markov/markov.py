@@ -64,7 +64,7 @@ def markov_stats(c, list, bot):
         c.privmsg(list[5], "chains: %d" % len(statetab.items()))
 
 #loads in a previously pickled saved state
-def markov_load(c, list, bot):
+def markov_load(c, list, bot): 
     global statetab
     global lock
 
@@ -81,6 +81,7 @@ def markov_load(c, list, bot):
             print "Could not load db: Doesn't exist\n"
 
         lock.release()
+        c.privmsg(list[5], "Ohai thar")
 
 
 #pickles out the state to a file

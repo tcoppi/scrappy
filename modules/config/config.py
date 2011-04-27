@@ -15,3 +15,5 @@ def init(scrap):
 	#modules to load on startup
 	scrap.startup = []
 	
+	print "THIS SHOULD NOT WORK"
+	
