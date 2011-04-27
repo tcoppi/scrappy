@@ -49,8 +49,10 @@ def init(scrap):
 
     random.seed()
 
-    #api = twitter.Api(username=twitteruser, password=twitterpass)
-    #api = twitter.Api(consumer_key=consumer_key, consumer_secret=consumer_secret)#, access_token_key=access_token, access_token_secret=access_token_secret)
+#    api = twitter.Api(username=twitteruser, password=twitterpass)
+#    api = twitter.Api(consumer_key=consumer_key, consumer_secret=consumer_secret)
+    #, access_token_key=access_token, access_token_secret=access_token_secret)
+
 
 def markov_stats(c, list, bot):
     global statetab
@@ -155,7 +157,7 @@ def markov_learn(c, list, bot):
 
     lock.acquire()
 
-    words = [x.lower().strip() for x in list[4].split(" ") if not x.isspace()]
+    words = [x.strip() for x in list[4].split(" ") if not x.isspace()]
     if len(words) <= 1:
         lock.release()
         return
@@ -240,7 +242,7 @@ def markov_talk(c, list, bot):
     cmd = list[4].split(" ")[0]
 
     try:
-        key = list[4].split(" ")[1].lower()
+        key = random.choice([list[4].split(" ")[1].upper(), list[4].split(" ")[1].lower()])
     except IndexError:
         key = " "
 
