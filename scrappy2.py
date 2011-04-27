@@ -39,7 +39,7 @@ class scrappy:
 			self.load_module(m)
 		
 		#start the bot
-		self.__main()
+		#self.__main()
 
 		
 	########################################################################
