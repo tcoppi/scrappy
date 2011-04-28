@@ -193,7 +193,7 @@ def markov_learn(c, list, bot):
         return
 
     #randomly reply
-    if random.randint(0, 15) == 0 and bot.talk == 1:
+    if random.randint(0, 7) == 0 and bot.talk == 1:
         c.privmsg(list[5], "%s" % (emit_chain(random.choice(list[4].split(" ")))))
 
     lock.release()
