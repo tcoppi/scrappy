@@ -181,7 +181,7 @@ def markov_learn(c, list, bot):
 
     statetab.setdefault((w1, w2), []).append("\n")
 
-    if nickmatch.search(list[4]) and bot.autorep == 1 and random.randint(0, 10) == 0:
+    if nickmatch.search(list[4]) and bot.autorep == 1:
         tmp = emit_chain(random.choice(list[4].split(" ")))
 
         if len(tmp) <= 2:
