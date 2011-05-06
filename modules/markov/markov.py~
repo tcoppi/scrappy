@@ -60,7 +60,6 @@ def markov_stats(c, list, bot):
     cmd = list[4].split(" ")[0]
 
     if cmd == "markov_stats":
-        c.privmsg(list[5], "words: %d" % len(statetab[("\n", "\n")]))
         c.privmsg(list[5], "chains: %d" % len(statetab.items()))
 
 #loads in a previously pickled saved state
@@ -77,8 +76,9 @@ def markov_load(c, list, bot):
         try:
             pkfile = open(fp, "r")
             statetab = pickle.load(pkfile)
+            c.privmsg(list[5], "Loaded %s." % fp)
         except IOError:
-            print "Could not load db: Doesn't exist\n"
+                c.privmsg(list[5], "Could not load '%s': Doesn't exist\n" % fp)
 
         lock.release()
 
@@ -98,7 +98,7 @@ def markov_dump(c, list, bot):
         pkfile = open(fp, "w+")
 
         pickle.dump(statetab, pkfile)
-
+        c.privmsg(list[5], "Done taking a dump.")
     lock.release()
 
 def markov_file(c, list, bot):

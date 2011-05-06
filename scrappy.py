@@ -146,7 +146,7 @@ class scrappy:
                 try:
                         self.ircsock.process_forever()
                 except KeyboardInterrupt:
-                        self.connection.quit("Keyboard interrupt!")
+                        self.connection.quit("BAIL OUT!!")
 
 
         ########################################################################
@@ -277,12 +277,22 @@ class scrappy:
                 nick = irclib_scrappy.nm_to_n(eventlist.source())
                 user = irclib_scrappy.nm_to_u(eventlist.source())
                 host = irclib_scrappy.nm_to_h(eventlist.source())
+                
 
                 if arg[0] == self.cmdchar:
                         cmd = arg[1:]
                         iscmd = True
                 else:
                         cmd = arg
+                        
+                params = {'nick' : nick,
+                          'user' : user,
+                          'host' : host,
+                          'iscmd' : iscmd,
+                          'cmd' : cmd,
+                          'source' : eventlist.target()
+                }
+                
 
                 #how can we make the list that's passed to functions more friendly?
                 #we end up parsing the list again in the called function...
