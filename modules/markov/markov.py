@@ -14,13 +14,8 @@ import threading
 last = ""
 import twitter
 
-api = None
-twitteruser = 'scrappybot'
-twitterpass = 'scrappyb0t'
-consumer_key = 'N2q3Owp3hRqDebYcoJN0Q'
-consumer_secret = 'fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE'
-access_token_key = 'access_token'
-access_token_secret = 'access_token_secret'
+
+
 
 nickmatch = None
 statetab = {}
@@ -31,7 +26,7 @@ w1 = w2 = "\n"
 def init(scrap):
     global nickmatch
     global lock
-    global api
+
 
     lock = threading.Lock()
     scrap.autorep = True
@@ -43,15 +38,11 @@ def init(scrap):
     scrap.register_event("markov", "msg", markov_load)
     scrap.register_event("markov", "msg", markov_dump)
     scrap.register_event("markov", "msg", markov_stats)
-    #scrap.register_event("markov", "msg", tweet)
+    scrap.register_event("markov", "msg", tweet)
 
     nickmatch = re.compile(scrap.nickname)
 
     random.seed()
-
-#    api = twitter.Api(username=twitteruser, password=twitterpass)
-#    api = twitter.Api(consumer_key=consumer_key, consumer_secret=consumer_secret)
-    #, access_token_key=access_token, access_token_secret=access_token_secret)
 
 
 def markov_stats(c, list, bot):
@@ -152,6 +143,8 @@ def markov_learn(c, list, bot):
     """ Should not be called directly """
     global lock
 
+    if list[4].startswith('@'):
+        return
     cmd = list[4].split(" ")[0]
     if cmd == "talk" or cmd == "markov_stats" or cmd == "mkload" or cmd == "mkdump":
         return
@@ -203,6 +196,7 @@ def emit_chain(key):
     global statetab
     global w1
     global w2
+    global last
 
     i = 0
 
@@ -223,7 +217,9 @@ def emit_chain(key):
         try:
             newword = random.choice(statetab[(w1, w2)]).strip()
         except KeyError:
+            last = retval
             return retval
+            
 
         retval = retval + newword + " "
         w1, w2 = w2, newword
@@ -232,8 +228,9 @@ def emit_chain(key):
 
         #max of rand words if we don't hit a space or other error
         if i >= random.randint(5, 50):
+            last = retval
             return retval
-
+    last = retval
     return retval
 
 def markov_talk(c, list, bot):
@@ -253,7 +250,7 @@ def markov_talk(c, list, bot):
             return
         if len(tmp.split()) <= 1:
             tmp = emit_chain(" ")
-        last = tmp
+        last = ("%s %s" % (key, tmp)).lstrip()
         c.privmsg(list[5], ("%s %s" % (key, tmp)).lstrip())
 
 
@@ -262,5 +259,14 @@ def tweet(c, args, bot):
     cmd = args[4].split(" ")[0]
 
     if cmd == "tweet":
+        #consumer_key = 'N2q3Owp3hRqDebYcoJN0Q'
+        #consumer_secret = 'fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE'
+        #access_token_key = '21156817-VFyeze14zS3K9PrLQiXkgmvBOxorbNrAJyNwW09IQ'
+        #access_token_secret = 'nK7Gr7JRyUl7E4cM4EyBUq6bIEG8g0VuzimurtOyI'
+
+        api = twitter.Api('N2q3Owp3hRqDebYcoJN0Q',
+                          'fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE', 
+                          "21156817-VFyeze14zS3K9PrLQiXkgmvBOxorbNrAJyNwW09IQ", 
+                          'nK7Gr7JRyUl7E4cM4EyBUq6bIEG8g0VuzimurtOyI')
         api.PostUpdate(last)
         c.privmsg(args[5], "Updated Twitter with message: %s" % last)

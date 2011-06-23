@@ -5,7 +5,7 @@ import sys
 def init(scrap):
 	#hardcoded for now
 	scrap.server = "thisnukes4u.net"
-	scrap.cmdchar = "!"
+	scrap.cmdchar = "@"
 	scrap.nickname = "scrappy"
 	scrap.username = "scrappy"
 	scrap.realname = "Scrappy Bot"

@@ -62,6 +62,7 @@ def markov_stats(c, list, bot):
     if cmd == "markov_stats":
         c.privmsg(list[5], "chains: %d" % len(statetab.items()))
 
+
 #loads in a previously pickled saved state
 def markov_load(c, list, bot):
     global statetab

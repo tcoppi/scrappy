@@ -27,7 +27,7 @@ class scrappy:
                 debug("Scrappy bot started.")
                 #hard-code these for now
                 #then write a config loading module
-                self.cmdchar = '!'
+                self.cmdchar = '@'
                 self.nickname = 'scrappy'
                 self.username = 'scrappy'
                 self.realname = 'Scrappy Bot'
