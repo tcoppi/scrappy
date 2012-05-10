@@ -33,7 +33,7 @@ class scrappy:
                 self.realname = 'Scrappy Bot'
                 self.server = ''
                 self.port = 6667
-                self.chanlist = []
+                self.chanlist = ['#scrappy', '##polyphasers']
                 self.ircsock = '' #this will be the socket
                 self.connection = '' #Thomas, explain this to me later
                 self.lock = threading.Lock()

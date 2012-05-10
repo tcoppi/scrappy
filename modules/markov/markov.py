@@ -12,7 +12,7 @@ import threading
 
 #EXPERIMENTAL
 last = ""
-import twitter
+#import twitter
 
 
 
@@ -38,7 +38,7 @@ def init(scrap):
     scrap.register_event("markov", "msg", markov_load)
     scrap.register_event("markov", "msg", markov_dump)
     scrap.register_event("markov", "msg", markov_stats)
-    scrap.register_event("markov", "msg", tweet)
+#    scrap.register_event("markov", "msg", tweet)
 
     nickmatch = re.compile(scrap.nickname)
 
@@ -113,8 +113,8 @@ def markov_file(c, list, bot):
         for line in mf.readlines():
             words = [x.strip() for x in line.split(" ") if not x.isspace()]
             if len(words) <= 1:
-                lock.release()
-                return
+                #lock.release()
+                continue
 
             global statetab
             global w1
@@ -146,7 +146,7 @@ def markov_learn(c, list, bot):
     if list[4].startswith('@'):
         return
     cmd = list[4].split(" ")[0]
-    if cmd == "talk" or cmd == "markov_stats" or cmd == "mkload" or cmd == "mkdump":
+    if cmd == "talk" or cmd == "markov_stats" or cmd == "mkload" or cmd == "mkdump" or cmd == "markov_file":
         return
 
     lock.acquire()
@@ -255,18 +255,18 @@ def markov_talk(c, list, bot):
 
 
 
-def tweet(c, args, bot):
-    cmd = args[4].split(" ")[0]
+#def tweet(c, args, bot):
+#    cmd = args[4].split(" ")[0]
 
-    if cmd == "tweet":
+#    if cmd == "tweet":
         #consumer_key = 'N2q3Owp3hRqDebYcoJN0Q'
         #consumer_secret = 'fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE'
         #access_token_key = '21156817-VFyeze14zS3K9PrLQiXkgmvBOxorbNrAJyNwW09IQ'
         #access_token_secret = 'nK7Gr7JRyUl7E4cM4EyBUq6bIEG8g0VuzimurtOyI'
 
-        api = twitter.Api('N2q3Owp3hRqDebYcoJN0Q',
-                          'fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE', 
-                          "21156817-VFyeze14zS3K9PrLQiXkgmvBOxorbNrAJyNwW09IQ", 
-                          'nK7Gr7JRyUl7E4cM4EyBUq6bIEG8g0VuzimurtOyI')
-        api.PostUpdate(last)
-        c.privmsg(args[5], "Updated Twitter with message: %s" % last)
+#        api = twitter.Api('N2q3Owp3hRqDebYcoJN0Q',
+#                          'fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE', 
+#                          "21156817-VFyeze14zS3K9PrLQiXkgmvBOxorbNrAJyNwW09IQ", 
+#                          'nK7Gr7JRyUl7E4cM4EyBUq6bIEG8g0VuzimurtOyI')
+#        api.PostUpdate(last)
+#        c.privmsg(args[5], "Updated Twitter with message: %s" % last)
