@@ -6,8 +6,9 @@ import urllib, httplib
 def init(bot):
 	bot.register_event("gcalc", "msg", gcalc)
 
-def gcalc(c, args, bot):
-        cmd = args[4].split(" ")[0]
+def gcalc(server, args, bot):
+    c = server["connection"]
+    cmd = args[4].split(" ")[0]
 	if cmd == "gcalc":
 	        try:
 	                query = args[4][6:]
@@ -22,8 +23,8 @@ def gcalc(c, args, bot):
 	        search = google.getresponse()
 	        data = search.read()
 	        #print data
-	        
-	        if data.find(start) == -1: 
+
+	        if data.find(start) == -1:
 	                c.privmsg(args[5], "Google Calculator results not found.")
 	                return
 	        else:
@@ -33,5 +34,5 @@ def gcalc(c, args, bot):
 	                c.privmsg(args[5], result)
 
 
-	
+
 

@@ -150,26 +150,26 @@ class scrappy:
                         print "Failed to connect to %s:%s" % (server["server"], server["port"])
                         connection = None
 
+                    #if all goes well, register handlers
+                    if connection is not None:
+                        connection.add_global_handler("welcome", self.on_connect)
+                        connection.add_global_handler("disconnect", self.on_disconnect)
+                        connection.add_global_handler("error", self.on_error)
+                        connection.add_global_handler("invite", self.on_invite)
+                        connection.add_global_handler("join", self.on_join)
+                        connection.add_global_handler("kick", self.on_kick)
+                        connection.add_global_handler("mode", self.on_mode)
+                        connection.add_global_handler("part", self.on_part)
+                        connection.add_global_handler("ping", self.on_ping)
+                        connection.add_global_handler("pong", self.on_pong)
+                        connection.add_global_handler("privmsg", self.on_privmsg)
+                        connection.add_global_handler("privnotice", self.on_privnotice)
+                        connection.add_global_handler("pubmsg", self.on_privmsg)
+                        connection.add_global_handler("quit", self.on_quit)
+
                     server["connection"] = connection
 
                 print self.servers
-
-                #if all goes well, register handlers
-                self.connection.add_global_handler("welcome", self.on_connect)
-                self.connection.add_global_handler("disconnect", self.on_disconnect)
-                self.connection.add_global_handler("error", self.on_error)
-                self.connection.add_global_handler("invite", self.on_invite)
-                self.connection.add_global_handler("join", self.on_join)
-                self.connection.add_global_handler("kick", self.on_kick)
-                self.connection.add_global_handler("mode", self.on_mode)
-                self.connection.add_global_handler("part", self.on_part)
-                self.connection.add_global_handler("ping", self.on_ping)
-                self.connection.add_global_handler("pong", self.on_pong)
-                self.connection.add_global_handler("privmsg", self.on_privmsg)
-                self.connection.add_global_handler("privnotice", self.on_privnotice)
-                self.connection.add_global_handler("pubmsg", self.on_privmsg)
-                self.connection.add_global_handler("quit", self.on_quit)
-
 
                 #self.list_modules()
 
@@ -178,8 +178,17 @@ class scrappy:
                 try:
                         self.ircsock.process_forever()
                 except KeyboardInterrupt:
-                        self.connection.quit("BAIL OUT!!")
+                    for server in self.servers:
+                        server = self.servers[server]
+                        server["connection"].quit("BAIL OUT!!")
 
+
+        ########################################################################
+        def get_server(self, conn):
+            for server in self.servers:
+                server = self.servers[server]
+                if conn == server["connection"]:
+                    return server
 
         ########################################################################
         ###################
@@ -217,9 +226,6 @@ class scrappy:
         def unregister_event(self, event_type, func):
                 pass
 
-
-
-
         ########################################################################
         ##################
         #Event Handlers  #
@@ -236,7 +242,8 @@ class scrappy:
                 #		% self.nickservpass)
 
                 #join channels
-                for chan in self.chanlist:
+                server = self.get_server(conn)
+                for chan in server["channels"]:
                         if irclib_scrappy.is_channel(chan):
                                 conn.join(chan)
 
@@ -302,6 +309,7 @@ class scrappy:
         def on_privmsg(self, conn, eventlist):
                 """Called when bot receives a private or channel (public) message."""
                 #eventlist.arguments() = the message body
+                server = self.get_server(conn)
                 arg = eventlist.arguments()[0]
 
                 iscmd = False #?
@@ -311,7 +319,7 @@ class scrappy:
                 host = irclib_scrappy.nm_to_h(eventlist.source())
 
 
-                if arg[0] == self.cmdchar:
+                if arg[0] == server["cmdchar"]:
                         cmd = arg[1:]
                         iscmd = True
                 else:
@@ -325,14 +333,13 @@ class scrappy:
                           'source' : eventlist.target()
                 }
 
-
                 #how can we make the list that's passed to functions more friendly?
                 #we end up parsing the list again in the called function...
                 #for func in self.privmsg_events:
                 #	thread.start_new_thread(func, (conn, [nick, user, host, iscmd, cmd, eventlist.target()], self))
                 for funcs in self.privmsg_events.itervalues():
                         for f in funcs:
-                                thread.start_new_thread(f, (conn, [nick, user, host, iscmd, cmd, eventlist.target()], self))
+                                thread.start_new_thread(f, (server, [nick, user, host, iscmd, cmd, eventlist.target()], self))
 
 
         ########################################################################
