@@ -3,10 +3,16 @@
 #If this is nice and organized, then writing new modules will be a snap and this
 #file should rarely have to be edited.
 
-import irclib_scrappy
-import sys, os
+import ConfigParser
+DEFAULT_CONFIG = "default.conf"
+CONFIG_NAME = ".scrappyrc"
+
+import os, os.path
+import sys
 import traceback
 import thread, threading
+
+import irclib_scrappy
 
 ################################################################################
 #set to False to turn off debugging to stdout
@@ -24,20 +30,40 @@ def debug(msg):
 #done via modules that get loaded here.
 class scrappy:
         def __init__(self):
+                # TODO: Use logging module
                 debug("Scrappy bot started.")
                 #hard-code these for now
                 #then write a config loading module
-                self.cmdchar = '@'
-                self.nickname = 'scrappy'
-                self.username = 'scrappy'
-                self.realname = 'Scrappy Bot'
-                self.server = ''
-                self.port = 6667
-                self.chanlist = ['#scrappy', '##polyphasers']
-                self.ircsock = '' #this will be the socket
-                self.connection = '' #Thomas, explain this to me later
-                self.lock = threading.Lock()
 
+                if not os.path.exists(CONFIG_NAME):
+                    print "Error: Configuration file '%s' not found." % CONFIG_NAME
+                    print "Copy %s to %s and modify as necessary." % (DEFAULT_CONFIG, CONFIG_NAME)
+                    sys.exit(1)
+                self.config = ConfigParser.SafeConfigParser()
+                self.config.read(CONFIG_NAME)
+
+                self.servers = {}
+                required_items = ["cmdchar","nickname","username","realname",
+                                    "server","port","channels"]
+                for server in self.config.sections():
+                    self.servers[server] = {}
+                    for (k,v) in self.config.items(server):
+                        self.servers[server][k] = v
+
+                    # Sanity check
+                    errors = False
+                    for item in required_items:
+                        if item not in self.servers[server]:
+                            errors = True
+                            print "Error: %s not found in configuration." % item
+                        if errors:
+                            sys.exit(1)
+
+                    self.servers[server]["channels"] = self.servers[server]["channels"].split()
+                    self.servers[server]["port"] = int(self.servers[server]["port"])
+
+                self.ircsock = '' #this will be the socket
+                self.lock = threading.Lock()
 
                 #our event lists.
                 #each module adds functions to be called to these events.
@@ -109,18 +135,24 @@ class scrappy:
         def __main(self):
                 """The real work.  Initialize our connection and register events."""
                 #parse comamnd line and create a new socket
-                self.parse_argv()
+                #self.parse_argv()
                 self.ircsock = irclib_scrappy.IRC()
 
-                #attempt to create a socket and connect to the server
-                try:
-                        self.connection = self.ircsock.server().connect(self.server,
-                                        self.port, self.nickname,
-                                        username=self.username,ircname=self.realname)
-                        #connection failed, print error and exit
-                except irclib_scrappy.ServerConnectionError, x:
-                        print x
-                        sys.exit(1)
+                for server in self.servers:
+                    server = self.servers[server]
+                    try:
+                        print server
+                        connection = self.ircsock.server().connect(server["server"], server["port"], server["nickname"],
+                                                                    username=server["username"], ircname=server["realname"])
+                    except irclib_scrappy.ServerConnectionError, err:
+                        print err
+                        print "Nonfatal Error: %s" % err
+                        print "Failed to connect to %s:%s" % (server["server"], server["port"])
+                        connection = None
+
+                    server["connection"] = connection
+
+                print self.servers
 
                 #if all goes well, register handlers
                 self.connection.add_global_handler("welcome", self.on_connect)
@@ -277,14 +309,14 @@ class scrappy:
                 nick = irclib_scrappy.nm_to_n(eventlist.source())
                 user = irclib_scrappy.nm_to_u(eventlist.source())
                 host = irclib_scrappy.nm_to_h(eventlist.source())
-                
+
 
                 if arg[0] == self.cmdchar:
                         cmd = arg[1:]
                         iscmd = True
                 else:
                         cmd = arg
-                        
+
                 params = {'nick' : nick,
                           'user' : user,
                           'host' : host,
@@ -292,7 +324,7 @@ class scrappy:
                           'cmd' : cmd,
                           'source' : eventlist.target()
                 }
-                
+
 
                 #how can we make the list that's passed to functions more friendly?
                 #we end up parsing the list again in the called function...
