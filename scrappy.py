@@ -45,11 +45,14 @@ class scrappy:
 
                 self.servers = {}
                 required_items = ["cmdchar","nickname","username","realname",
-                                    "server","port","channels"]
+                                    "server","port","channels", "ssl"]
                 for server in self.config.sections():
                     self.servers[server] = {}
                     for (k,v) in self.config.items(server):
                         self.servers[server][k] = v
+
+                    # Ok ok, so ssl is already a key, but I want to coerce it to bool
+                    self.servers[server]["ssl"] = self.config.getboolean(server, "ssl")
 
                     # Sanity check
                     errors = False
@@ -138,13 +141,16 @@ class scrappy:
                 for server in self.servers:
                     server = self.servers[server]
                     try:
-                        print server
                         # SSL! hardcoded
-                        ssl_factory = ircclient.connection.Factory(wrapper=ssl.wrap_socket)
-                        normal_factory = ircclient.connection.Factory()
+                        if server["ssl"]:
+                            factory = ircclient.connection.Factory(wrapper=ssl.wrap_socket)
+                        else:
+                            print "Hey, we really don't like you not using SSL" # TODO: log warning
+                            factory = ircclient.connection.Factory()
+
                         connection = self.ircsock.server().connect(server["server"], server["port"], server["nickname"],
                                                                     username=server["username"], ircname=server["realname"],
-                                                                    connect_factory=ssl_factory)
+                                                                    connect_factory=factory)
                     except ircclient.ServerConnectionError, err:
                         print err
                         print "Nonfatal Error: %s" % err
@@ -171,10 +177,6 @@ class scrappy:
                         connection.execute_every(5, self.on_tick, arguments=(connection,))
 
                     server["connection"] = connection
-
-                print self.servers
-
-                #self.list_modules()
 
                 #enter main event loop after this
                 #no code after here
