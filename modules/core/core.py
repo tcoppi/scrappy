@@ -2,36 +2,60 @@
 
 import sys
 
-def init(scrap):
-	#register commands
-	scrap.register_event("core", "msg", help_cmd)
-	scrap.register_event("core", "msg", join_cmd)
+class core(object):
+    def __init__(self, scrap):
+        self.command_callbacks = {}
+        scrap.register_event("core", "msg", self.distribute)
+        #register commands
+        #scrap.register_event("core", "msg", help_cmd)
+        #scrap.register_event("core", "msg", join_cmd)
+        self.register_cmd("help", self.help_cmd)
+        self.register_cmd("join", self.join_cmd)
 
-def help_cmd(c,list,bot):
-	"""help - Lists all available commands and their docstrings"""
-	if list[4] == "help" and list[3]:
-		#put the events into a set so we can compute the union
-		#Or maybe we should use sets for the events from the start?
+    def register_cmd(self, cmd, callback):
+        if cmd not in self.command_callbacks:
+            self.command_callbacks[cmd] = []
 
-		s1 = set()
-		s2 = set()
+        self.command_callbacks[cmd].append(callback)
 
-		for event in bot.privmsg_events:
-			s1.add(event.__doc__)
-		for event in bot.pubmsg_events:
-			s2.add(event.__doc__)
+    def get_help(self, server):
+        docstrings = set()
+        for command in self.command_callbacks:
+            callback_list = self.command_callbacks[command]
+            for callback in callback_list:
+                doc = callback.__doc__
+                doc = "%s%s\n%s" % (server["cmdchar"], command, doc)
+                docstrings.add(doc)
+        return docstrings
 
-		funcnames = s1.union(s2)
+    def distribute(self, server, event, bot):
+        if event.iscmd: # event is command
+            command = event.cmd.split(" ")[0]
+            if command in self.command_callbacks:
+                for callback in self.command_callbacks[command]:
+                    callback(server, event, bot)
 
-		for name in funcnames:
-			c.privmsg(list[0],name)
+    def help_cmd(self, server,event,bot):
+        """help - Lists all available commands and their docstrings"""
+        c = server["connection"]
 
-def join_cmd(c,list,bot):
-    """join a channel"""
-    cmd = list[4].split(" ")[0]
+        #put the events into a set so we can compute the union
+        #Or maybe we should use sets for the events from the start?
 
-    #replace tcoppi with the name of the bot owner(config option)
-    if cmd == "join" and list[0] == "tcoppi":
-	chan = list[4].split(" ")[1]
-	c.join(chan)
+        for module in bot.modules.values():
+            help_set = module.get_help(server)
+            c.privmsg(event.nick, "Module: %s" % module.__class__.__name__)
+            for docstring in help_set:
+                for part in docstring.split("\n"):
+                    c.privmsg(event.nick,part)
+
+
+    def join_cmd(self, server,event,bot):
+        """join a channel"""
+        c = server["connection"]
+
+        # Bot owner
+        if event.nick == "Landon":
+            chan = event.cmd.split(" ")[1]
+            c.join(chan)
 

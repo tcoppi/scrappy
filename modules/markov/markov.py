@@ -45,7 +45,8 @@ def init(scrap):
     random.seed()
 
 
-def markov_stats(c, list, bot):
+def markov_stats(server, list, bot):
+    c = server["connection"]
     global statetab
 
     cmd = list[4].split(" ")[0]
@@ -55,7 +56,8 @@ def markov_stats(c, list, bot):
 
 
 #loads in a previously pickled saved state
-def markov_load(c, list, bot):
+def markov_load(server, list, bot):
+    c = server["connection"]
     global statetab
     global lock
 
@@ -76,7 +78,8 @@ def markov_load(c, list, bot):
 
 
 #pickles out the state to a file
-def markov_dump(c, list, bot):
+def markov_dump(server, list, bot):
+    c = server["connection"]
     global statetab
     global lock
 
@@ -93,7 +96,8 @@ def markov_dump(c, list, bot):
         c.privmsg(list[5], "Done taking a dump.")
     lock.release()
 
-def markov_file(c, list, bot):
+def markov_file(server, list, bot):
+    c = server["connection"]
     """Load a plaintext file."""
     cmd = list[4].split(" ")[0]
 
@@ -139,7 +143,8 @@ def markov_file(c, list, bot):
         lock.release()
 
 
-def markov_learn(c, list, bot):
+def markov_learn(server, list, bot):
+    c = server["connection"]
     """ Should not be called directly """
     global lock
 
@@ -219,7 +224,7 @@ def emit_chain(key):
         except KeyError:
             last = retval
             return retval
-            
+
 
         retval = retval + newword + " "
         w1, w2 = w2, newword
@@ -233,7 +238,8 @@ def emit_chain(key):
     last = retval
     return retval
 
-def markov_talk(c, list, bot):
+def markov_talk(server, list, bot):
+    c = server["connection"]
     """ Makes the markov chain talk to you """
     global last
 
@@ -255,7 +261,8 @@ def markov_talk(c, list, bot):
 
 
 
-#def tweet(c, args, bot):
+#def tweet(server, args, bot):
+#    c = server["connection"]
 #    cmd = args[4].split(" ")[0]
 
 #    if cmd == "tweet":
@@ -265,8 +272,8 @@ def markov_talk(c, list, bot):
         #access_token_secret = 'nK7Gr7JRyUl7E4cM4EyBUq6bIEG8g0VuzimurtOyI'
 
 #        api = twitter.Api('N2q3Owp3hRqDebYcoJN0Q',
-#                          'fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE', 
-#                          "21156817-VFyeze14zS3K9PrLQiXkgmvBOxorbNrAJyNwW09IQ", 
+#                          'fEwVrTWDJYAnDMDduI2RsVLnyMIAvmfHeYt7HAuzE',
+#                          "21156817-VFyeze14zS3K9PrLQiXkgmvBOxorbNrAJyNwW09IQ",
 #                          'nK7Gr7JRyUl7E4cM4EyBUq6bIEG8g0VuzimurtOyI')
 #        api.PostUpdate(last)
 #        c.privmsg(args[5], "Updated Twitter with message: %s" % last)
