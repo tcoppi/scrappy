@@ -326,31 +326,30 @@ class scrappy:
         ################
         #Module Loading#
         ################
-        #TODO: Return booleans, maybe raise exceptions if necessary
         def load_module(self, name):
-            self.logger.debug("Loading module %s." % name)
+            self.logger.debug("Loading module '%s'." % name)
             if name in self.modules:
-                self.logger.debug("Actually, module %s already loaded, reloading.")
+                self.logger.debug("Actually, module '%s' already loaded, reloading." % name)
                 return self.reload_module(name)
 
             try:
                 package = __import__(name+"."+name)
                 module = getattr(package, name)
                 cls = getattr(module, name)
-            except AttributeError:
-                self.logger.exception("Error: module %s.%s not found, make sure %s/%s.py exists" % (name,name,name,name))
-                return "Sorry, there was an error loading %s." % name
-            except ImportError:
-                self.logger.exception("No such module %s" % name)
-                return "Sorry, there was an error loading %s." % name
+            except AttributeError as err:
+                self.logger.exception("Module '%s' not found, make sure %s/%s.py exists." % (name,name,name,name))
+                raise err
+            except ImportError as err:
+                self.logger.exception("No such module '%s'." % name)
+                raise err
 
             try:
                 self.modules[name] = cls(self)
             except Exception as err:
-                self.logger.exception("Error: Module failed to initialize")
-                return "Sorry, there was an error loading %s." % name
+                self.logger.exception("Error: Module '%s' failed to initialize." % name)
+                raise err
 
-            return "Loaded %s." % name
+            return True
 
         def reload_module(self, name):
             self.unload_module(name)
@@ -367,10 +366,9 @@ class scrappy:
                         #del(sys.modules[name])
                         del(sys.modules[fullname])
                 else:
-                    #self.lock.release()
-                    return "Sorry, no module named %s is loaded." % name
+                    return False
 
-            return "%s unloaded." % name
+            return True
 
         def unregister_module(self, name):
             for event in self.events.values():

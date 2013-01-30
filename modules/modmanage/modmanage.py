@@ -1,74 +1,85 @@
 #stuff for loading/unloading/managing/getting stats about modules
 
-class modmanage(object):
+from module import Module
+
+class modmanage(Module):
     def __init__(self, scrap):
-        self.command_callbacks = {}
+        super(modmanage, self).__init__(scrap)
+
         scrap.register_event("modmanage", "msg", self.distribute)
-        #TODO: Remove me at some point
-        scrap.register_event("modmanage", "tick", self.annoy)
-        #scrap.register_event("modmanage", "msg", self.modload_cmd)
-        #scrap.register_event("modmanage", "msg", self.modunload_cmd)
-        #scrap.register_event("modmanage", "msg", self.modlist_cmd)
-        #scrap.register_event("modmanage", "msg", self.getevents_cmd)
+
+        # Modload
         self.register_cmd("modload", self.modload_cmd)
         self.register_cmd("load", self.modload_cmd)
         self.register_cmd("loadmod", self.modload_cmd)
 
-    def register_cmd(self, cmd, callback):
-        if cmd not in self.command_callbacks:
-            self.command_callbacks[cmd] = []
+        # Modunload
+        self.register_cmd("modunload", self.modunload_cmd)
+        self.register_cmd("unload", self.modunload_cmd)
+        self.register_cmd("unloadmod", self.modunload_cmd)
 
-        self.command_callbacks[cmd].append(callback)
+        # Modlist
+        self.register_cmd("modlist", self.modlist_cmd)
 
-    def get_help(self, server):
-        docstrings = set()
-        for command in self.command_callbacks:
-            callback_list = self.command_callbacks[command]
-            for callback in callback_list:
-                doc = callback.__doc__
-                doc = "%s%s\n%s" % (server["cmdchar"], command, doc)
-                docstrings.add(doc)
-        return docstrings
-
-    def distribute(self, server, event, bot):
-        if event.iscmd: # event is command
-            command = event.cmd.split(" ")[0]
-            if command in self.command_callbacks:
-                for callback in self.command_callbacks[command]:
-                    callback(server, event, bot)
+        # Getevents
+        self.register_cmd("getevents", self.getevents_cmd)
 
     def annoy(self, server, bot):
         c = server["connection"]
         c.privmsg("#scrappy", "Tick.")
 
-    def modload_cmd(self, server,event,bot):
+    def modload_cmd(self, server, event, bot):
         """modload - Loads a module"""
         c = server["connection"]
 
         param = event.cmd.split(" ")[1]
-        c.privmsg(event.target, bot.load_module(param))
+        msg = ""
+        try:
+            bot.load_module(param)
+            msg = "%s loaded." % param
+        except Exception as err:
+            msg = "Unable to load %s." % param
 
-    def modunload_cmd(self, server, list, bot):
+        c.privmsg(event.target, msg)
+
+    def modunload_cmd(self, server, event, bot):
         """modunload - Unloads a module"""
         c = server["connection"]
-        cmd = list[4].split(" ")[0]
-        if (cmd == "modunload") or (cmd == "unload") or (cmd == "unloadmod") and list[3]:
-            param = list[4].split(" ")[1]
-            if not param == "modmanage":
-                c.privmsg(list[5], bot.unload_module(param))
-            else:
-                c.privmsg(list[5], "Cannot unload modmanage.")
 
-    def modlist_cmd(self, server,list,bot):
+        param = event.cmd.split(" ")[1]
+        if not param == "modmanage":
+            msg = ""
+            if bot.unload_module(param):
+                msg = "Module '%s' unloaded successfully." % param
+            else:
+                msg = "Module '%s' failed to unload." % param
+            c.privmsg(event.target, msg)
+        else:
+            c.privmsg(event.target, "You don't want to modmanage.")
+
+    def modlist_cmd(self, server, event, bot):
         """modlist - Lists loaded modules"""
         c = server["connection"]
-        if list[4] == "modlist" and list[3]:
-            c.privmsg(list[5],bot.modulelist)
 
-    def getevents_cmd(self, server, list, bot):
+        msg = ", ".join(bot.modules)
+        # TODO: Do I need to split? Or will irclib split long messages automatically.
+        c.privmsg(event.target, msg)
+
+    def getevents_cmd(self, server, event, bot):
         c = server["connection"]
-        cmd = list[4].split(" ")[0]
-        if cmd == "getevents" and list[3]:
-            param = list[4].split(" ")[1]
-            param = "bot."+param+"_events"
-            c.privmsg(list[5], eval(param))
+        param = event.cmd.split(" ")[1]
+
+        if param in bot.events:
+            event_dict = bot.events[param]
+            if len(event_dict) > 0:
+                for module, callbacks in event_dict.items():
+                    msg = []
+                    for callback in callbacks:
+                        msg.append(callback.__name__)
+
+                    msg = ", ".join(msg)
+                    c.privmsg(event.target, "%s: %s" % (module, msg))
+            else:
+                c.privmsg(event.target, "No callbacks registered for %s event" % param)
+        else:
+            c.privmsg(event.target, "%s not a valid event." % param)
