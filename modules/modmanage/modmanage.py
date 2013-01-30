@@ -18,6 +18,16 @@ class modmanage(object):
 
         self.command_callbacks[cmd].append(callback)
 
+    def get_help(self, server):
+        docstrings = set()
+        for command in self.command_callbacks:
+            callback_list = self.command_callbacks[command]
+            for callback in callback_list:
+                doc = callback.__doc__
+                doc = "%s%s\n%s" % (server["cmdchar"], command, doc)
+                docstrings.add(doc)
+        return docstrings
+
     def distribute(self, server, event, bot):
         if event.iscmd: # event is command
             command = event.cmd.split(" ")[0]
@@ -30,7 +40,7 @@ class modmanage(object):
         c = server["connection"]
 
         param = event.cmd.split(" ")[1]
-        c.privmsg(event.target(), bot.load_module(param))
+        c.privmsg(event.target, bot.load_module(param))
 
     def modunload_cmd(self, server, list, bot):
         """modunload - Unloads a module"""

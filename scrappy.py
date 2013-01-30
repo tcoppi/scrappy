@@ -8,11 +8,14 @@ DEFAULT_CONFIG = "default.conf"
 CONFIG_NAME = ".scrappyrc"
 
 import os, os.path
+import ssl
 import sys
 import traceback
 import thread, threading
 
-import irclib_scrappy
+#import irclib_scrappy
+#import irclib
+from irclib import client as ircclient
 
 ################################################################################
 #set to False to turn off debugging to stdout
@@ -128,15 +131,19 @@ class scrappy:
         def __main(self):
                 """The real work.  Initialize our connection and register events."""
                 # Create a new socket
-                self.ircsock = irclib_scrappy.IRC()
+                self.ircsock = ircclient.IRC()
 
                 for server in self.servers:
                     server = self.servers[server]
                     try:
                         print server
+                        # SSL! hardcoded
+                        ssl_factory = ircclient.connection.Factory(wrapper=ssl.wrap_socket)
+                        normal_factory = ircclient.connection.Factory()
                         connection = self.ircsock.server().connect(server["server"], server["port"], server["nickname"],
-                                                                    username=server["username"], ircname=server["realname"])
-                    except irclib_scrappy.ServerConnectionError, err:
+                                                                    username=server["username"], ircname=server["realname"],
+                                                                    connect_factory=ssl_factory)
+                    except ircclient.ServerConnectionError, err:
                         print err
                         print "Nonfatal Error: %s" % err
                         print "Failed to connect to %s:%s" % (server["server"], server["port"])
@@ -213,9 +220,7 @@ class scrappy:
             #TODO: Custom events for classes that need it, like privmsg
             for module_events in self.events[event_name].values():
                 for func in module_events:
-                    print module_events
                     thread.start_new_thread(func, (self.get_server(conn), event, self))
-
 
         ########################################################################
         def on_connect(self, conn, event):
@@ -229,7 +234,7 @@ class scrappy:
             #join channels
             server = self.get_server(conn)
             for chan in server["channels"]:
-                if irclib_scrappy.is_channel(chan):
+                if ircclient.is_channel(chan):
                     conn.join(chan)
 
         ########################################################################
@@ -247,62 +252,62 @@ class scrappy:
         def on_error(self, conn, event):
             self.process_events("error", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Error received: %s" % event.arguments())
+            debug("Error received: %s" % event.arguments)
 
         ########################################################################
         def on_invite(self, conn, event):
             self.process_events("invite", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Received an invite: %s" % event.arguments())
+            debug("Received an invite: %s" % event.arguments)
 
         ########################################################################
         def on_join(self, conn, event):
             self.process_events("join", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("User joined: %s" % event.arguments())
+            debug("User joined: %s" % event.arguments)
 
         ########################################################################
         def on_kick(self, conn, event):
             self.process_events("kick", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Someone was kicked: %s" % event.arguments())
+            debug("Someone was kicked: %s" % event.arguments)
 
         ########################################################################
         def on_mode(self, conn, event):
             self.process_events("mode", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Mode change: %s" % event.arguments())
+            debug("Mode change: %s" % event.arguments)
 
         ########################################################################
         def on_part(self, conn, event):
             self.process_events("part", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Part: %s" % event.arguments())
+            debug("Part: %s" % event.arguments)
 
         ########################################################################
         def on_ping(self, conn, event):
             self.process_events("ping", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Ping: %s" % event.arguments())
+            debug("Ping: %s" % event.arguments)
 
         ########################################################################
         def on_pong(self, conn, event):
             self.process_events("pong", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Pong: %s" % event.arguments())
+            debug("Pong: %s" % event.arguments)
 
         ########################################################################
         def on_privmsg(self, conn, event):
             """Called when bot receives a private or channel (public) message."""
             #eventlist.arguments() = the message body
             server = self.get_server(conn)
-            event.arg = event.arguments()[0]
+            event.arg = event.arguments[0]
 
             event.iscmd = False #?
 
-            event.nick = irclib_scrappy.nm_to_n(event.source())
-            event.user = irclib_scrappy.nm_to_u(event.source())
-            event.host = irclib_scrappy.nm_to_h(event.source())
+            event.nick = event.source.nick
+            event.user = event.source.user
+            event.host = event.source.host
 
             if event.arg[0] == server["cmdchar"]:
                 event.cmd = event.arg[1:]
@@ -336,7 +341,7 @@ class scrappy:
         def on_privnotice(self, conn, event):
             self.process_events("privnotice", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Privnotice: %s" % event.arguments())
+            debug("Privnotice: %s" % event.arguments)
 
         ########################################################################
         #right now this isn't used because it's assumed that privmsg == pubmsg
@@ -344,21 +349,19 @@ class scrappy:
         def on_pubmsg(self, conn, event):
             self.process_events("pubmsg", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Pubmsg: % " % event.arguments())
+            debug("Pubmsg: % " % event.arguments)
 
         ########################################################################
         def on_quit(self, conn, event):
             self.process_events("quit", conn, event)
             #TODO: Move this debug to a logging module of some sort
-            debug("Quit: %s" % event.arguments())
+            debug("Quit: %s" % event.arguments)
 
 
         ################
         #Module Loading#
         ################
         def load_module(self, name):
-            print name
-            debug("Not Reloading")
             if name in self.modules:
                 debug("Actually, module already loaded, reloading.")
                 return self.reload_module(name)

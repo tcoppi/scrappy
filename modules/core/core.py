@@ -18,6 +18,16 @@ class core(object):
 
         self.command_callbacks[cmd].append(callback)
 
+    def get_help(self, server):
+        docstrings = set()
+        for command in self.command_callbacks:
+            callback_list = self.command_callbacks[command]
+            for callback in callback_list:
+                doc = callback.__doc__
+                doc = "%s%s\n%s" % (server["cmdchar"], command, doc)
+                docstrings.add(doc)
+        return docstrings
+
     def distribute(self, server, event, bot):
         if event.iscmd: # event is command
             command = event.cmd.split(" ")[0]
@@ -32,18 +42,13 @@ class core(object):
         #put the events into a set so we can compute the union
         #Or maybe we should use sets for the events from the start?
 
-        s1 = set()
-        s2 = set()
+        for module in bot.modules.values():
+            help_set = module.get_help(server)
+            c.privmsg(event.nick, "Module: %s" % module.__class__.__name__)
+            for docstring in help_set:
+                for part in docstring.split("\n"):
+                    c.privmsg(event.nick,part)
 
-        for event in bot.events["privmsg"].values():
-            s1.add(event.__doc__)
-        for event in bot.events["pubmsg"].values():
-            s2.add(event.__doc__)
-
-        funcnames = s1.union(s2)
-
-        for name in funcnames:
-            c.privmsg(event.nick,name)
 
     def join_cmd(self, server,event,bot):
         """join a channel"""
