@@ -18,14 +18,14 @@ class core(object):
 
         self.command_callbacks[cmd].append(callback)
 
-    def distribute(self, server, list, bot):
-        if list[3]: # event is command
-            command = list[4].split(" ")[0]
+    def distribute(self, server, event, bot):
+        if event.iscmd: # event is command
+            command = event.cmd.split(" ")[0]
             if command in self.command_callbacks:
                 for callback in self.command_callbacks[command]:
-                    callback(server, list, bot)
+                    callback(server, event, bot)
 
-    def help_cmd(self, server,list,bot):
+    def help_cmd(self, server,event,bot):
         """help - Lists all available commands and their docstrings"""
         c = server["connection"]
 
@@ -35,22 +35,22 @@ class core(object):
         s1 = set()
         s2 = set()
 
-        for event in bot.privmsg_events:
+        for event in bot.events["privmsg"].values():
             s1.add(event.__doc__)
-        for event in bot.pubmsg_events:
+        for event in bot.events["pubmsg"].values():
             s2.add(event.__doc__)
 
         funcnames = s1.union(s2)
 
         for name in funcnames:
-            c.privmsg(list[0],name)
+            c.privmsg(event.nick,name)
 
-    def join_cmd(self, server,list,bot):
+    def join_cmd(self, server,event,bot):
         """join a channel"""
         c = server["connection"]
 
         # Bot owner
-        if list[0] == "Landon":
-            chan = list[4].split(" ")[1]
+        if event.nick == "Landon":
+            chan = event.cmd.split(" ")[1]
             c.join(chan)
 
