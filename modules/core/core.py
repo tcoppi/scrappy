@@ -1,5 +1,6 @@
 #Module for scrappy that implements some core commands, like 'help'
 
+import os
 import sys
 
 class core(object):
@@ -11,6 +12,7 @@ class core(object):
         #scrap.register_event("core", "msg", join_cmd)
         self.register_cmd("help", self.help_cmd)
         self.register_cmd("join", self.join_cmd)
+        self.register_cmd("reboot", self.reboot_cmd)
 
     def register_cmd(self, cmd, callback):
         if cmd not in self.command_callbacks:
@@ -55,7 +57,18 @@ class core(object):
         c = server["connection"]
 
         # Bot owner
+        # TODO: Store in config
         if event.nick == "Landon":
             chan = event.cmd.split(" ")[1]
             c.join(chan)
+
+    def reboot_cmd(self, server, event, bot):
+        """ Reboot the bot """
+        c = server["connection"]
+
+        if event.nick == "Landon":
+            for server in bot.servers.values():
+                server["connection"].quit("BAIL OUT FOR REBOOT!!!")
+            os.execv(bot.argv[0], bot.argv)
+
 
