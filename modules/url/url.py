@@ -4,7 +4,8 @@ import cPickle
 def init(bot):
     bot.register_event("url", "msg", url)
 
-def url(c, args, bot):
+def url(server, args, bot):
+    c = server["connection"]
     cmd = args[4].split(" ")[0]
 
     try:
