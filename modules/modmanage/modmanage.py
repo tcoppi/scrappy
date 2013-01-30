@@ -4,6 +4,8 @@ class modmanage(object):
     def __init__(self, scrap):
         self.command_callbacks = {}
         scrap.register_event("modmanage", "msg", self.distribute)
+        #TODO: Remove me at some point
+        scrap.register_event("modmanage", "tick", self.annoy)
         #scrap.register_event("modmanage", "msg", self.modload_cmd)
         #scrap.register_event("modmanage", "msg", self.modunload_cmd)
         #scrap.register_event("modmanage", "msg", self.modlist_cmd)
@@ -34,6 +36,10 @@ class modmanage(object):
             if command in self.command_callbacks:
                 for callback in self.command_callbacks[command]:
                     callback(server, event, bot)
+
+    def annoy(self, server, bot):
+        c = server["connection"]
+        c.privmsg("#scrappy", "Tick.")
 
     def modload_cmd(self, server,event,bot):
         """modload - Loads a module"""
