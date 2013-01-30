@@ -2,15 +2,33 @@
 
 import sys
 
-def init(scrap):
-    #register commands
-    scrap.register_event("core", "msg", help_cmd)
-    scrap.register_event("core", "msg", join_cmd)
+class core(object):
+    def __init__(self, scrap):
+        self.command_callbacks = {}
+        scrap.register_event("core", "msg", self.distribute)
+        #register commands
+        #scrap.register_event("core", "msg", help_cmd)
+        #scrap.register_event("core", "msg", join_cmd)
+        self.register_cmd("help", self.help_cmd)
+        self.register_cmd("join", self.join_cmd)
 
-def help_cmd(server,list,bot):
-    """help - Lists all available commands and their docstrings"""
-    c = server["connection"]
-    if list[4] == "help" and list[3]:
+    def register_cmd(self, cmd, callback):
+        if cmd not in self.command_callbacks:
+            self.command_callbacks[cmd] = []
+
+        self.command_callbacks[cmd].append(callback)
+
+    def distribute(self, server, list, bot):
+        if list[3]: # event is command
+            command = list[4].split(" ")[0]
+            if command in self.command_callbacks:
+                for callback in self.command_callbacks[command]:
+                    callback(server, list, bot)
+
+    def help_cmd(self, server,list,bot):
+        """help - Lists all available commands and their docstrings"""
+        c = server["connection"]
+
         #put the events into a set so we can compute the union
         #Or maybe we should use sets for the events from the start?
 
@@ -27,13 +45,12 @@ def help_cmd(server,list,bot):
         for name in funcnames:
             c.privmsg(list[0],name)
 
-def join_cmd(server,list,bot):
-    """join a channel"""
-    c = server["connection"]
-    cmd = list[4].split(" ")[0]
+    def join_cmd(self, server,list,bot):
+        """join a channel"""
+        c = server["connection"]
 
-    #replace tcoppi with the name of the bot owner(config option)
-    if cmd == "join" and list[0] == "tcoppi":
-        chan = list[4].split(" ")[1]
-        c.join(chan)
+        # Bot owner
+        if list[0] == "Landon":
+            chan = list[4].split(" ")[1]
+            c.join(chan)
 

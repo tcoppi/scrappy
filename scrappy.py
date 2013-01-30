@@ -32,8 +32,6 @@ class scrappy:
         def __init__(self):
                 # TODO: Use logging module
                 debug("Scrappy bot started.")
-                #hard-code these for now
-                #then write a config loading module
 
                 if not os.path.exists(CONFIG_NAME):
                     print "Error: Configuration file '%s' not found." % CONFIG_NAME
@@ -91,6 +89,7 @@ class scrappy:
                 self.quit_events = [] #for other users quitting, not the bot
                 #self.what_other_events? = []
 
+                self.modules = {}
                 sys.path.append(os.path.join(os.getcwd(), "modules"))
                 #need to load a few modules here - the rest are done elsewhere
                 self.load_module("modmanage")
@@ -221,7 +220,6 @@ class scrappy:
                         #self.pubmsg_events.append(func)
                         self.privmsg_events.setdefault(modname, set()).add(func)
                         self.pubmsg_events.setdefault(modname, set()).add(func)
-
 
         def unregister_event(self, event_type, func):
                 pass
@@ -369,61 +367,59 @@ class scrappy:
         #Module Loading#
         ################
         def load_module(self, name):
-                try:
-                        self.modulelist.index(name)
-                        #module is already loaded
-                        return self.reload_module(name)
-                except ValueError:
-                        debug("Not Reloading")
-                        try:
-                                exec("from %s import %s" % (name, name))
-                        #module = __import__(name)
-                        #debug("Loading %s" % name)
-                        except ImportError:
-                                #should be error output
-                                print "No such module\n"
-                                print traceback.print_exc()
-                                return "Sorry, there was an error loading %s." % name
-                        debug("This should only print once")
-                        debug(eval(name).init(self))
-                        self.register_module(name,'foo','foo')
-                        return "Loaded %s." % name
+            debug("Not Reloading")
+            if name in self.modules:
+                debug("Actually, module already loaded, reloading.")
+                return self.reload_module(name)
+            #try:
+            try:
+                package = __import__(name+"."+name)
+                module = getattr(package, name)
+                cls = getattr(module, name)
+            except AttributeError:
+                print "Error: module %s.%s not found, make sure %s/%s.py exists" % (name,name,name,name)
+                print traceback.print_exc()
+                return "Sorry, there was an error loading %s." % name
+            except ImportError:
+                print "No such module %s" % name
+                print traceback.print_exc()
+                return "Sorry, there was an error loading %s." % name
+
+            try:
+                self.modules[name] = cls(self)
+            except Exception as err:
+                print "Error: Module failed to initialize"
+                print traceback.print_exc()
+                return "Sorry, there was an error loading %s." % name
+
+            return "Loaded %s." % name
 
         def reload_module(self, name):
-                debug("Module already loaded, reloading.")
                 self.unload_module(name)
-                reload(sys.modules[name])
-                self.register_module(name, 'foo', 'foo')
-                debug(eval(name).init(self))
-                return "Reloaded %s." % name
+                return self.load_module(name)
 
         def unload_module(self, name):
                 self.lock.acquire()
-                try:
-                        self.modulelist.index(name)
-                except:
-                        print "No such module!"
-                        self.lock.release()
-                        return "Sorry, no module named %s is loaded." % name
-                self.unregister_module(name)
+                if name in self.modules:
+                    self.unregister_module(name)
+                    self.modules.pop(name)
+                else:
+                    self.lock.release()
+                    return "Sorry, no module named %s is loaded." % name
+
                 self.lock.release()
                 return "%s unloaded." % name
 
-        def register_module(self, name, eventlist, function):
-                self.modulelist.append(name)
-
+        # TODO: Better event system
         def unregister_module(self, name):
-                self.modulelist.remove(name)
                 self.msg_events.pop(name)
                 self.privmsg_events.pop(name)
                 self.pubmsg_events.pop(name)
 
-
-
         def list_modules(self):
                 """List currently loaded modules."""
                 print "Currently loaded modules:"
-                for mod in self.modulelist:
+                for mod in self.modules:
                         print mod
 
 
