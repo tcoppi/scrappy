@@ -70,5 +70,7 @@ class core(object):
             for server in bot.servers.values():
                 server["connection"].quit("BAIL OUT FOR REBOOT!!!")
             os.execv(bot.argv[0], bot.argv)
+            # Just in case execv fails
+            sys.exit(0)
 
 
