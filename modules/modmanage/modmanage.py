@@ -55,7 +55,7 @@ class modmanage(Module):
                 msg = "Module '%s' failed to unload." % param
             c.privmsg(event.target, msg)
         else:
-            c.privmsg(event.target, "You don't want to modmanage.")
+            c.privmsg(event.target, "You don't want to unload modmanage.")
 
     def modlist_cmd(self, server, event, bot):
         """modlist - Lists loaded modules"""
