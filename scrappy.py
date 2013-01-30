@@ -22,8 +22,8 @@ from irclib import client as ircclient
 DEBUG = True
 
 def debug(msg):
-        if DEBUG:
-                print msg
+    if DEBUG:
+        print msg
 
 ################################################################################
 
@@ -102,33 +102,6 @@ class scrappy:
 
                 #start the bot
                 self.__main()
-
-        ########################################################################
-        def parse_argv(self):
-                """Parse the commandline args and print a usage message if incorrect."""
-                if len(sys.argv) < 3: #Need at least server
-                        self.print_usage()
-                        sys.exit(1)
-
-                #split out the port if specified
-                s = sys.argv[1].split(":", 1)
-                self.server = s[0]
-
-                #a port is given
-                if len(s) == 2:
-                        try:
-                                self.port = int(s[1])
-                        except ValueError:
-                                print "Error: Erroneous port."
-                                sys.exit(1)
-
-                self.nickname = sys.argv[2]
-                #add channels to chanlist
-                for ch in sys.argv[3:]:
-                        self.chanlist.append('#%s' % ch)
-
-        def print_usage(self):
-                print 'Usage: %s <server[:port]> <nickname> [channel 1 channel 2 ... channelN]' % sys.argv[0]
 
         ########################################################################
         def __main(self):
@@ -424,13 +397,6 @@ class scrappy:
             for event in self.events.values():
                 if name in event:
                     event.pop(name)
-
-        def list_modules(self):
-                """List currently loaded modules."""
-                print "Currently loaded modules:"
-                for mod in self.modules:
-                        print mod
-
 
 if(__name__ == "__main__"):
         bot = scrappy()
