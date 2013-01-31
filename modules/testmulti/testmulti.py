@@ -33,7 +33,7 @@ class testmulti(Module):
     def sosleepy(self, server, event, bot):
         c = server["connection"]
         sleep(5)
-        c.privmsg(list[5], "Yawn, I'm awake now!")
+        c.privmsg(event.target, "Yawn, I'm awake now!")
 
     def wtf(self):
         print "wtf!"
