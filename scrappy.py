@@ -351,11 +351,14 @@ class scrappy:
             except ImportError as err:
                 self.logger.exception("No such module '%s'." % name)
                 raise err
+            except Exception as err:
+                self.logger.exception("Error loading module '%s': %s" % (name, err))
+                raise err
 
             try:
                 self.modules[name] = cls(self)
             except Exception as err:
-                self.logger.exception("Error: Module '%s' failed to initialize." % name)
+                self.logger.exception("Module '%s' failed to initialize." % name)
                 raise err
 
             return True
