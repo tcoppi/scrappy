@@ -1,26 +1,33 @@
 import socket
 
-def init(bot):
-	bot.register_event("dns", "msg", dns)
+from module import Module
 
-def dns(server, args, bot):
-    c = server["connection"]
-	cmd = args[4].split(" ")[0]
-	if cmd == "dns":
-		if not args[4].split(" ")[1:]:
-			ret = "Nothing to look up, zoob!"
-		else:
-			ret = args[4].split(" ")[1]
-			if ret[-1].isdigit():
-				try:
-					host, alias, ip = socket.gethostbyaddr(ret)
-					ret = "%s -> %s" % (ret, host)
-				except socket.gaierror:
-					ret = "No result for '%s'" % ret
-			else:
-				try:
-					ret = "%s -> %s" % (ret, socket.gethostbyname(ret))
-				except socket.gaierror:
-					ret = "No result for '%s'" % ret
+class dns(Module):
+    def __init__(self, scrap):
+        super(dns, self).__init__(scrap)
 
-		c.privmsg(args[5], ret)
+        scrap.register_event("dns", "msg", self.distribute)
+
+        # Dns
+        self.register_cmd("dns", self.dns)
+
+    def dns(self, server, event, bot):
+        c = server["connection"]
+        param = event.cmd.split(" ")[1:]
+        print param
+        if len(param) == 0:
+            msg = "Nothing to look up, zoob!"
+        else:
+            addr = param[0]
+            if addr[-1].isdigit():
+                try:
+                    host, alias, ip = socket.gethostbyaddr(addr)
+                    msg = "%s -> %s" % (addr, host)
+                except socket.gaierror:
+                    msg = "No result for '%s'" % addr
+            else:
+                try:
+                    msg = "%s -> %s" % (addr, socket.gethostbyname(addr))
+                except socket.gaierror:
+                    msg = "No result for '%s'" % addr
+            c.privmsg(event.target, msg)
