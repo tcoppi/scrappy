@@ -1,31 +1,41 @@
 import socket
 import cPickle
 
-def init(bot):
-    bot.register_event("url", "msg", url)
+from module import Module
 
-def url(server, args, bot):
-    c = server["connection"]
-    cmd = args[4].split(" ")[0]
+class url(Module):
+    def __init__(self, scrap):
+        super(url, self).__init__(scrap)
+        scrap.register_event("url", "msg", self.distribute)
 
-    try:
-        fp = open("urldb", "r+")
-        db = cPickle.load(fp)
-        fp.close()
-    except:
-        db = {}
+        self.register_cmd("url", self.url)
 
-    if cmd == "url":
+    def url(self, server, event, bot):
+        c = server["connection"]
+
+
         try:
-            newurl = args[4].split(" ")[2]
-            db[args[4].split(" ")[1]] = newurl
-
-            fp = open("urldb", "w")
-            cPickle.dump(db, fp)
-            fp.close()
-
-            c.privmsg(args[5], "Saved " + args[4].split(" ")[1] + " as " + newurl)
+            with open("urldb", "r+") as fp:
+                db = cPickle.load(fp)
         except:
-            # then we only have to look it up
-            c.privmsg(args[5], db[args[4].split(" ")[1]])
+            db = {}
 
+        params = event.cmd.split(" ")[1:]
+        if len(params) > 1:
+            identifier = params[0]
+            url = params[1]
+
+            db[identifier] = url
+
+            with open("urldb", "w") as fp:
+                cPickle.dump(db, fp)
+
+        elif len(params) == 1:
+            identifier = params[0]
+            url = db[identifier]
+
+        else:
+            c.privmsg(event.target, "You need to have a url to look up or store!")
+            return
+
+        c.privmsg(event.target, url)
