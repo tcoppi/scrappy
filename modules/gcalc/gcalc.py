@@ -28,7 +28,6 @@ class gcalc(Module):
         google.request("GET","/search?"+query+"&num=1")
         search = google.getresponse()
         data = search.read()
-        print data
 
         if data.find(start) == -1:
             c.privmsg(event.target, "Google Calculator results not found.")
