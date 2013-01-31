@@ -1,19 +1,25 @@
-def init(scrap):
-    scrap.register_event("reverse", "msg", reverse)
+from module import Module
 
-def reverse(server, args, bot):
-    """Takes a string and reverses it.  Simple."""
-    c = server["connection"]
-    cmd = args[4].split(" ")[0]
-    if cmd == "reverse":
+class reverse(Module):
+    def __init__(self, scrap):
+        print "reverse loading"
+        super(reverse, self).__init__(scrap)
 
-        if not args[4].split(" ")[1:]:
-            strng = "?tahw esreveR"
-        else:
-            strng = args[4].replace(cmd, "")
-            #print strng
-            rev = list(strng)
+        scrap.register_event("reverse", "msg", self.distribute)
+
+        self.register_cmd("reverse", self.reverse)
+
+    def reverse(self, server, event, bot):
+        """Takes a string and reverses it.  Simple."""
+        c = server["connection"]
+
+        params = event.cmd.split(" ")[1:]
+        if len(params) > 0:
+            # Squishes all the whitespace. oh well.
+            rev = list(" ".join(params))
             rev.reverse()
             strng = ''.join(rev)
+        else:
+            strng = "?tahw esreveR"
 
-        c.privmsg(args[5], strng)
+        c.privmsg(event.target, strng)
