@@ -1,44 +1,39 @@
 from time import sleep
 
-def init(scrap):
-	scrap.register_event("msg", testmulti)
-	scrap.register_event("msg", haiomega)
-	scrap.register_event("msg", sosleepy)
-#	scrap.register_msg_event(haiomega)
-#	scrap.register_msg_event(hailandon)
-#	scrap.register_msg_event(sosleepy)
+from module import Module
 
+class testmulti(Module):
+    def __init__(self, scrap):
+        super(testmulti, self).__init__(scrap)
 
-def testmulti(server, list, bot):
-    c = server["connection"]
-	cmd = list[4].split(" ")[0]
-	if cmd == "testmulti":
-		c.privmsg(list[5], "Sleeping for 5 seconds, yaaawn.")
+        scrap.register_event("testmulti", "msg", self.distribute)
 
-def haicoppi(server, list, bot):
-    c = server["connection"]
-	cmd = list[4].split(" ")[0]
-	if cmd == "testmulti":
-		c.privmsg("tcoppi", "Ohai")
+        self.register_cmd("testmulti", self.testmulti)
+        self.register_cmd("testmulti", self.hailandon)
+        self.register_cmd("testmulti", self.haiomega)
+        self.register_cmd("testmulti", self.haicoppi)
+        self.register_cmd("testmulti", self.sosleepy)
 
-def haiomega(server, list, bot):
-    c = server["connection"]
-	cmd = list[4].split(" ")[0]
-	if cmd == "testmulti":
-		c.privmsg("[mharrison]", "Ohai")
+    def testmulti(self, server, event, bot):
+        c = server["connection"]
+        c.privmsg(event.source, "Sleeping for 5 seconds, yaaawn.")
 
-def hailandon(server, list, bot):
-    c = server["connection"]
-	cmd = list[4].split(" ")[0]
-	if cmd == "testmulti":
-		c.privmsg("Landon", "Ohai")
+    def haicoppi(self, server, event, bot):
+        c = server["connection"]
+        c.privmsg("tcoppi", "Ohai")
 
-def sosleepy(server, list, bot):
-    c = server["connection"]
-	cmd = list[4].split(" ")[0]
-	if cmd == "testmulti":
-		sleep(5)
-		c.privmsg(list[5], "Yawn, I'm awake now!")
+    def haiomega(self, server, event, bot):
+        c = server["connection"]
+        c.privmsg("[mharrison]", "Ohai")
 
-def wtf():
-	print "wtf!"
+    def hailandon(self, server, event, bot):
+        c = server["connection"]
+        c.privmsg("Landon", "Ohai")
+
+    def sosleepy(self, server, event, bot):
+        c = server["connection"]
+        sleep(5)
+        c.privmsg(list[5], "Yawn, I'm awake now!")
+
+    def wtf(self):
+        print "wtf!"
