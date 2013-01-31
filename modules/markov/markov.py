@@ -8,256 +8,220 @@ import random
 import pickle
 import re
 import threading
+import logging
 
+from module import Module
 
-#EXPERIMENTAL
-last = ""
-#import twitter
+class markov(Module):
+    def __init__(self,scrap):
+        super(markov, self).__init__(scrap)
+        self.last = ""
 
+        self.nickmatch = None
+        self.statetab = {}
+        self.lock = None
+        self.w1 = "\n"
+        self.w2 = "\n"
 
+        self.lock = threading.Lock()
+        scrap.autorep = True
+        scrap.talk = True
 
+        scrap.register_event("markov,", "msg", self.distribute)
+        scrap.register_event("markov", "msg", self.markov_learn)
 
-nickmatch = None
-statetab = {}
-lock = None
-w1 = w2 = "\n"
-
-
-def init(scrap):
-    global nickmatch
-    global lock
-
-
-    lock = threading.Lock()
-    scrap.autorep = True
-    scrap.talk = True
-
-    scrap.register_event("markov", "msg", markov_learn)
-    scrap.register_event("markov", "msg", markov_file)
-    scrap.register_event("markov", "msg", markov_talk)
-    scrap.register_event("markov", "msg", markov_load)
-    scrap.register_event("markov", "msg", markov_dump)
-    scrap.register_event("markov", "msg", markov_stats)
+        self.register_cmd("markov_file", self.markov_file)
+        self.register_cmd("talk", self.markov_talk)
+        self.register_cmd("mkdump", self.markov_dump)
+        self.register_cmd("mkload", self.markov_load)
+        self.register_cmd("stats", self.markov_stats)
 #    scrap.register_event("markov", "msg", tweet)
 
-    nickmatch = re.compile(scrap.nickname)
+        self.nickmatch = re.compile(scrap.servers.itervalues().next()['nickname'])
 
-    random.seed()
+        self.logger = logging.getLogger("scrappy.markov")
+        random.seed()
 
+    def markov_stats(self, server, event, bot):
+        c = server["connection"]
 
-def markov_stats(server, list, bot):
-    c = server["connection"]
-    global statetab
-
-    cmd = list[4].split(" ")[0]
-
-    if cmd == "markov_stats":
-        c.privmsg(list[5], "chains: %d" % len(statetab.items()))
+        c.privmsg(event.target, "chains: %d" % len(self.statetab.items()))
 
 
-#loads in a previously pickled saved state
-def markov_load(server, list, bot):
-    c = server["connection"]
-    global statetab
-    global lock
+    #loads in a previously pickled saved state
+    def markov_load(self, server, event, bot):
+        c = server["connection"]
 
-    cmd = list[4].split(" ")[0]
+        fp = event.cmd.split(" ")[1]
 
-    if cmd == "mkload":
-        fp = list[4].split(" ")[1]
-
-        lock.acquire()
+        self.lock.acquire()
         try:
             pkfile = open(fp, "r")
-            statetab = pickle.load(pkfile)
-            c.privmsg(list[5], "Loaded %s." % fp)
+            self.statetab = pickle.load(pkfile)
+            c.privmsg(event.target, "Loaded %s." % fp)
         except IOError:
-                c.privmsg(list[5], "Could not load '%s': Doesn't exist\n" % fp)
+                c.privmsg(event.target, "Could not load '%s': Doesn't exist\n" % fp)
 
-        lock.release()
+        self.lock.release()
 
 
-#pickles out the state to a file
-def markov_dump(server, list, bot):
-    c = server["connection"]
-    global statetab
-    global lock
+    #pickles out the state to a file
+    def markov_dump(self, server, event, bot):
+        c = server["connection"]
+        self.lock.acquire()
 
-    lock.acquire()
-
-    cmd = list[4].split(" ")[0]
-
-    if cmd == "mkdump":
-        fp = list[4].split(" ")[1]
+        fp = event.cmd.split(" ")[1]
 
         pkfile = open(fp, "w+")
 
-        pickle.dump(statetab, pkfile)
-        c.privmsg(list[5], "Done taking a dump.")
-    lock.release()
+        pickle.dump(self.statetab, pkfile)
+        c.privmsg(event.target, "Done taking a dump.")
 
-def markov_file(server, list, bot):
-    c = server["connection"]
-    """Load a plaintext file."""
-    cmd = list[4].split(" ")[0]
+        self.lock.release()
 
-    if cmd == "markov_file":
-        global lock
-        mfname = list[4].split(" ")[1]
+    def markov_file(self, server, event, bot):
+        c = server["connection"]
+        """Load a plaintext file."""
+        mfname = event.cmd.split(" ")[1]
 
-        lock.acquire()
+        self.lock.acquire()
         try:
             mf = open(mfname, 'r')
         except IOError:
-            c.privmsg(list[5], "Error loading file %s." % mfname)
-            lock.release()
+            c.privmsg(event.target, "Error loading file %s." % mfname)
+            self.lock.release()
             return
 
-        c.privmsg(list[5], "%s successfully opened.  Reading..." % mfname)
+        c.privmsg(event.target, "%s successfully opened.  Reading..." % mfname)
         for line in mf.readlines():
             words = [x.strip() for x in line.split(" ") if not x.isspace()]
             if len(words) <= 1:
-                #lock.release()
+                #self.lock.release()
                 continue
-
-            global statetab
-            global w1
-            global w2
 
             w1 = w2 = "\n"
 
             for w in words:
-                statetab.setdefault((w1, w2), []).append(w)
+                self.statetab.setdefault((w1, w2), []).append(w)
                 w1, w2 = w2, w
 
-            statetab.setdefault((w1, w2), []).append("\n")
+            self.statetab.setdefault((w1, w2), []).append("\n")
 
-        c.privmsg(list[5], "Done!")
+        c.privmsg(event.target, "Done!")
         mf.close()
-        lock.release()
+        self.lock.release()
 
-        lock.acquire()
+        self.lock.acquire()
         pkfile = open("%s.mk" % mf, "w+")
 
-        pickle.dump(statetab, pkfile)
-        lock.release()
+        pickle.dump(self.statetab, pkfile)
+        self.lock.release()
 
 
-def markov_learn(server, list, bot):
-    c = server["connection"]
-    """ Should not be called directly """
-    global lock
+    def markov_learn(self, server, event, bot):
+        """ Should not be called directly """
 
-    if list[4].startswith('@'):
-        return
-    cmd = list[4].split(" ")[0]
-    if cmd == "talk" or cmd == "markov_stats" or cmd == "mkload" or cmd == "mkdump" or cmd == "markov_file":
-        return
-
-    lock.acquire()
-
-    words = [x.strip() for x in list[4].split(" ") if not x.isspace()]
-    if len(words) <= 1:
-        lock.release()
-        return
-
-    global statetab
-    global w1
-    global w2
-
-    w1 = w2 = "\n"
-
-    #go through every word and put them in a hash table.
-    #EX the sentence "Mary had a little lamb"
-    #first iteration, w1 and w2 are both empty.
-    #statetab[w1][w2] doesn't exist, so make it and set
-    #statetab[""][""] to Mary.
-    #
-    #Then, set w1 to w2 and w2 to i, so the chain moves forward.
-    for i in words:
-        statetab.setdefault((w1, w2), []).append(i)
-        w1, w2 = w2, i
-
-    statetab.setdefault((w1, w2), []).append("\n")
-
-    if nickmatch.search(list[4]) and bot.autorep == 1:
-        tmp = emit_chain(random.choice(list[4].split(" ")))
-
-        if len(tmp) <= 2:
-            lock.release()
+        self.logger.info("in learn")
+        c = server["connection"]
+        if event.cmd.startswith(event.cmdchar):
+            return
+        if event.cmd == "talk" or event.cmd == "markov_stats" or event.cmd == "mkload" or event.cmd == "mkdump" or event.cmd == "markov_file":
             return
 
-        c.privmsg(list[5], "%s: %s" % (list[0], tmp))
-        lock.release()
-        return
+        self.lock.acquire()
 
-    #randomly reply
-    if random.randint(0, 7) == 0 and bot.talk == 1:
-        c.privmsg(list[5], "%s" % (emit_chain(random.choice(list[4].split(" ")))))
+        words = [x.strip() for x in event.cmd.split(" ") if not x.isspace()]
+        if len(words) <= 1:
+            self.lock.release()
+            return
 
-    lock.release()
+        w1 = w2 = "\n"
 
-def emit_chain(key):
-    global statetab
-    global w1
-    global w2
-    global last
+        #go through every word and put them in a hash table.
+        #EX the sentence "Mary had a little lamb"
+        #first iteration, w1 and w2 are both empty.
+        #statetab[w1][w2] doesn't exist, so make it and set
+        #statetab[""][""] to Mary.
+        #
+        #Then, set w1 to w2 and w2 to i, so the chain moves forward.
+        for i in words:
+            self.statetab.setdefault((w1, w2), []).append(i)
+            w1, w2 = w2, i
 
-    i = 0
+        self.statetab.setdefault((w1, w2), []).append("\n")
 
-    w1 = w2 = "\n"
+        if self.nickmatch.search(event.cmd) and bot.autorep == 1:
+            tmp = self.emit_chain(random.choice(event.cmd.split(" ")))
 
-    newword = ""
+            if len(tmp) <= 2:
+                self.lock.release()
+                return
 
-    #make the first word the key if its not a space
+            c.privmsg(event.target, "%s: %s" % (event.nick, tmp))
+            self.lock.release()
+            return
+
+        #randomly reply
+        if random.randint(0, 7) == 0 and bot.talk == 1:
+            c.privmsg(event.target, "%s" %
+                    (self.emit_chain(random.choice(event.cmd.split(" ")))))
+
+        self.lock.release()
+
+    def emit_chain(self, key):
+        self.logger.info("in self.emit_chain")
+        i = 0
+
+        w1 = w2 = "\n"
+
+        newword = ""
+
+        #make the first word the key if its not a space
 #    if(key != " "):
 #	 retval = key + " "
 #    else:
-    retval = ""
+        retval = ""
 
-    if key != " ":
-        w2 = key
+        if key != " ":
+            w2 = key
 
-    while 1:
+        while 1:
+            try:
+                newword = random.choice(self.statetab[(w1, w2)]).strip()
+            except KeyError:
+                last = retval
+                return retval
+
+
+            retval = retval + newword + " "
+            w1, w2 = w2, newword
+
+            i = i + 1
+
+            #max of rand words if we don't hit a space or other error
+            if i >= random.randint(5, 50):
+                last = retval
+                return retval
+        last = retval
+        return retval
+
+    def markov_talk(self, server, event, bot):
+        """ Makes the markov chain talk to you """
+        self.logger.info("in talk")
+
+        c = server["connection"]
         try:
-            newword = random.choice(statetab[(w1, w2)]).strip()
-        except KeyError:
-            last = retval
-            return retval
+            key = random.choice([event.cmd.split(" ")[1].upper(), event.cmd.split(" ")[1].lower()])
+        except IndexError:
+            key = " "
 
-
-        retval = retval + newword + " "
-        w1, w2 = w2, newword
-
-        i = i + 1
-
-        #max of rand words if we don't hit a space or other error
-        if i >= random.randint(5, 50):
-            last = retval
-            return retval
-    last = retval
-    return retval
-
-def markov_talk(server, list, bot):
-    c = server["connection"]
-    """ Makes the markov chain talk to you """
-    global last
-
-    cmd = list[4].split(" ")[0]
-
-    try:
-        key = random.choice([list[4].split(" ")[1].upper(), list[4].split(" ")[1].lower()])
-    except IndexError:
-        key = " "
-
-    if list[3] and cmd == "talk":
-        tmp = emit_chain(key)
+        tmp = self.emit_chain(key)
         if len(tmp) <= 2:
             return
         if len(tmp.split()) <= 1:
-            tmp = emit_chain(" ")
+            tmp = self.emit_chain(" ")
         last = ("%s %s" % (key, tmp)).lstrip()
-        c.privmsg(list[5], ("%s %s" % (key, tmp)).lstrip())
+        c.privmsg(event.target, ("%s %s" % (key, tmp)).lstrip())
 
 
 

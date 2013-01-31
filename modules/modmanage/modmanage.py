@@ -2,6 +2,7 @@
 
 from module import Module
 
+
 class modmanage(Module):
     def __init__(self, scrap):
         super(modmanage, self).__init__(scrap)
@@ -55,7 +56,7 @@ class modmanage(Module):
                 msg = "Module '%s' failed to unload." % param
             c.privmsg(event.target, msg)
         else:
-            c.privmsg(event.target, "You don't want to unload modmanage.")
+            c.privmsg(event.target, "You don't want to modmanage.")
 
     def modlist_cmd(self, server, event, bot):
         """modlist - Lists loaded modules"""

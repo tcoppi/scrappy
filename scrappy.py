@@ -295,6 +295,7 @@ class scrappy:
             else:
                 event.cmd = event.arg
 
+            event.cmdchar = server["cmdchar"]
             #event.source = event.target() # TODO: Explain this to me
 
             self.process_events("privmsg", conn, event)
