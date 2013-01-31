@@ -229,12 +229,20 @@ class scrappy:
         def on_disconnect(self, conn, event):
             """Called when the connection to the server is closed."""
             self.process_events("disconnect", conn, event)
-            conn.quit("Scrappy bot signing off.")
+            #Already quit!
+            #conn.quit("Scrappy bot signing off.")
 
             #do we need to clean stuff up?
-            # TODO: Check if this is the last active connection, then quit
-            # TODO: Maybe set server["connection"] = None if the conn object has no connected() method
-            sys.exit(0)
+            connected = False
+            for server in self.servers.values():
+                # TODO: Set failed connections to a closed connection object or something instead of None
+                if server["connection"] is not None:
+                    if server["connection"].is_connected():
+                        connected = True
+
+            # Quit if this was the last connection
+            if not connected:
+                sys.exit(0)
 
         ########################################################################
         def on_error(self, conn, event):
