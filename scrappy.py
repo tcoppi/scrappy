@@ -72,6 +72,7 @@ class scrappy:
 
                 self.servers[server]["channels"] = self.servers[server]["channels"].split()
                 self.servers[server]["port"] = int(self.servers[server]["port"])
+                self.servers[server]["servername"] = server
 
             self.ircsock = '' #this will be the socket
             self.lock = threading.Lock()
