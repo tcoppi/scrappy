@@ -11,7 +11,6 @@ import logging
 import os, os.path
 import ssl
 import sys
-import traceback
 import thread, threading
 
 #import irclib_scrappy
@@ -203,6 +202,7 @@ class scrappy:
             for module_events in self.events[event_name].values():
                 for func in module_events:
                     thread.start_new_thread(func, (self.get_server(conn), event, self))
+
 
         ########################################################################
         def on_tick(self, conn):
