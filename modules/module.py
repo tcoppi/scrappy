@@ -25,6 +25,7 @@ class Module(object):
 
     # Don't forget to close it!
     def get_db(self):
+        self.logger.debug("Using db db/%s.db" % self.__class__.__name__)
         conn = sqlite3.connect('db/%s.db' % self.__class__.__name__)
         return conn
 
