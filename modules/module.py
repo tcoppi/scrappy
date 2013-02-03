@@ -1,6 +1,7 @@
 import logging
 import os, os.path
 import sqlite3
+import time
 
 class ModuleException(Exception):
     pass
@@ -50,6 +51,9 @@ class Module(object):
             command = event.cmd.split(" ")[0]
             if command in self.command_callbacks:
                 for callback in self.command_callbacks[command]:
+                    start = time.time()
                     callback(server, event, bot)
+                    end = time.time()
+                    self.logger.debug("Command timing: %fs for %s " % (end-start, command))
 
 
