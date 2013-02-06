@@ -22,16 +22,15 @@ class core(Module):
     def help_cmd(self, server, event, bot):
         """help - Lists all available commands and their docstrings"""
         c = server["connection"]
-
-        if len(event.cmd.split(" ")[1:]) > 0:
-            param = event.cmd.split(" ")[1]
+        if len(event.tokens) > 1:
+            param = event.tokens[1]
             if param in bot.modules:
                 module = bot.modules[param]
                 help_set = module.get_help(server)
-                c.privmsg(event.nick, "Module: %s" % module.__class__.__name__)
+                c.privmsg(event.source.nick, "Module: %s" % module.__class__.__name__)
                 for docstring in help_set:
                     for part in docstring.split("\n"):
-                        c.privmsg(event.nick,part)
+                        c.privmsg(event.source.nick, part)
             else:
                 c.privmsg(event.target, "Module '%s' not loaded, so no help." % param)
         else:
@@ -43,15 +42,16 @@ class core(Module):
 
         # Bot owner
         # TODO: Store in config
-        if event.nick == "Landon":
-            chan = event.cmd.split(" ")[1]
-            c.join(chan)
+        if event.source.nick == "Landon":
+            if len(event.tokens) > 1:
+                chan = event.tokens[1]
+                c.join(chan)
 
     def reboot_cmd(self, server, event, bot):
         """ Reboot the bot """
         c = server["connection"]
 
-        if event.nick == "Landon":
+        if event.source.nick == "Landon":
             for server in bot.servers.values():
                 server["connection"].quit("BAIL OUT FOR REBOOT!!!")
             os.execv(bot.argv[0], bot.argv)

@@ -176,9 +176,6 @@ class scrappy:
 
         def process_event(self, conn, event):
             #self.logger.log(5, "%s: %s" % (event.type, event.arguments))
-            # Preserve privmsg/pubmsg interface for now:
-            if event.type in ["privmsg", "pubmsg"]:
-                return self.on_privmsg(conn, event)
 
             if event.type in self.events:
                 for module_events in self.events[event.type].values():
@@ -195,49 +192,6 @@ class scrappy:
             for module_events in self.events["tick"].values():
                 for func in module_events:
                     thread.start_new_thread(func, (self.get_server(conn), self))
-
-        ########################################################################
-        def on_privmsg(self, conn, event):
-            """Called when bot receives a private or channel (public) message."""
-            #eventlist.arguments() = the message body
-            server = self.get_server(conn)
-            event.arg = event.arguments[0]
-
-            event.iscmd = False #?
-
-            event.nick = event.source.nick
-            event.user = event.source.user
-            event.host = event.source.host
-
-            if event.arg[0] == server["cmdchar"]:
-                event.cmd = event.arg[1:]
-                event.iscmd = True
-            else:
-                event.cmd = event.arg
-
-            event.cmdchar = server["cmdchar"]
-            #event.source = event.target() # TODO: Explain this to me
-
-            for module_events in self.events[event.type].values():
-                for func in module_events:
-                        thread.start_new_thread(func, (self.get_server(conn), event, self))
-
-            #params = {'nick' : nick,
-            #          'user' : user,
-            #          'host' : host,
-            #          'iscmd' : iscmd,
-            #          'cmd' : cmd,
-            #          'source' : event.target() # What
-            #}
-
-
-            #how can we make the list that's passed to functions more friendly?
-            #we end up parsing the list again in the called function...
-            #for func in self.privmsg_events:
-            #	thread.start_new_thread(func, (conn, [nick, user, host, iscmd, cmd, event.target()], self))
-            #for funcs in self.privmsg_events.itervalues():
-            #    for f in funcs:
-            #        thread.start_new_thread(f, (server, [nick, user, host, iscmd, cmd, event.target()], self))
 
         ################
         #Module Loading#

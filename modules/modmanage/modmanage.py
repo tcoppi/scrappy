@@ -33,9 +33,10 @@ class modmanage(Module):
         """modload - Loads a module"""
         c = server["connection"]
 
-        param = event.cmd.split(" ")[1]
+        param = event.tokens[1]
         msg = ""
         try:
+            # Race condition?
             bot.load_module(param)
             msg = "%s loaded." % param
         except Exception as err:
@@ -47,7 +48,7 @@ class modmanage(Module):
         """modunload - Unloads a module"""
         c = server["connection"]
 
-        param = event.cmd.split(" ")[1]
+        param = event.tokens[1]
         if not param == "modmanage":
             msg = ""
             if bot.unload_module(param):
@@ -56,19 +57,19 @@ class modmanage(Module):
                 msg = "Module '%s' failed to unload." % param
             c.privmsg(event.target, msg)
         else:
-            c.privmsg(event.target, "You don't want to modmanage.")
+            c.privmsg(event.target, "You don't want to unload modmanage.")
 
     def modlist_cmd(self, server, event, bot):
         """modlist - Lists loaded modules"""
         c = server["connection"]
 
         msg = ", ".join(bot.modules)
-        # TODO: Do I need to split? Or will irclib split long messages automatically.
+        # TODO: Need to split
         c.privmsg(event.target, msg)
 
     def getevents_cmd(self, server, event, bot):
         c = server["connection"]
-        param = event.cmd.split(" ")[1]
+        param = event.tokens[1]
 
         if param in bot.events:
             event_dict = bot.events[param]

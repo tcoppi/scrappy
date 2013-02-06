@@ -47,13 +47,15 @@ class Module(object):
         return docstrings
 
     def distribute(self, server, event, bot):
-        if event.iscmd: # event is command
-            command = event.cmd.split(" ")[0]
-            if command in self.command_callbacks:
-                for callback in self.command_callbacks[command]:
+        event.arg = event.arguments[0]
+        event.tokens = event.arguments[0].split(" ")
+        event.command = event.tokens[0][1:]
+        if event.arg[0] == server["cmdchar"]: # event is command
+            if event.command in self.command_callbacks:
+                for callback in self.command_callbacks[event.command]:
                     start = time.time()
                     callback(server, event, bot)
                     end = time.time()
-                    self.logger.debug("Command timing: %fs for %s " % (end-start, command))
+                    self.logger.debug("Command timing: %fs for %s " % (end-start, event.command))
 
 
