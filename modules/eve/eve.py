@@ -4,6 +4,9 @@ import eveapi.eveapi as eveapi
 
 from module import Module
 
+from eve_cache import EveCache
+
+
 class eve(Module):
     def __init__(self, scrap):
         super(eve, self).__init__(scrap)
@@ -40,7 +43,7 @@ class eve(Module):
 
         (eve_id, eve_vcode) = credentials
 
-        api = eveapi.EVEAPIConnection()
+        api = eveapi.EVEAPIConnection(cacheHandler=EveCache())
         auth = api.auth(keyID=eve_id, vCode=eve_vcode)
         result = auth.account.Characters()
 
