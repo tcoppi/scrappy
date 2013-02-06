@@ -24,7 +24,8 @@ from irclib import client as ircclient
 # WARNING - Things we would rather not happen (e.g., using a non-SSL connection)
 # ERROR - Deviations from normal operation (e.g., failed to connect to a server)
 # CRITICAL - Scrappy gonna die! But not before spitting out a final goodbye! (e.g., SIGINT)
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=5)
 
 
 irc_logger = logging.getLogger("irclib.client")
@@ -137,20 +138,7 @@ class scrappy:
                 #if all goes well, register handlers
                 #TODO: What ones are we missing?
                 if connection is not None:
-                    connection.add_global_handler("welcome", self.on_connect)
-                    connection.add_global_handler("disconnect", self.on_disconnect)
-                    connection.add_global_handler("error", self.on_error)
-                    connection.add_global_handler("invite", self.on_invite)
-                    connection.add_global_handler("join", self.on_join)
-                    connection.add_global_handler("kick", self.on_kick)
-                    connection.add_global_handler("mode", self.on_mode)
-                    connection.add_global_handler("part", self.on_part)
-                    connection.add_global_handler("ping", self.on_ping)
-                    connection.add_global_handler("pong", self.on_pong)
-                    connection.add_global_handler("privmsg", self.on_privmsg)
-                    connection.add_global_handler("privnotice", self.on_privnotice)
-                    connection.add_global_handler("pubmsg", self.on_privmsg)
-                    connection.add_global_handler("quit", self.on_quit)
+                    connection.add_global_handler("all_events", self.process_event)
                     connection.execute_every(5, self.on_tick, arguments=(connection,))
 
                 server["connection"] = connection
@@ -197,11 +185,21 @@ class scrappy:
         ##################
         #Event Handlers  #
         ##################
-        def process_events(self, event_name, conn, event):
-            #TODO: Custom events for classes that need it, like privmsg
-            for module_events in self.events[event_name].values():
-                for func in module_events:
-                    thread.start_new_thread(func, (self.get_server(conn), event, self))
+
+        def process_event(self, conn, event):
+            #self.logger.log(5, "%s: %s" % (event.type, event.arguments))
+            # Preserve privmsg/pubmsg interface for now:
+            if event.type in ["privmsg", "pubmsg"]:
+                return self.on_privmsg(conn, event)
+
+            if event.type in self.events:
+                for module_events in self.events[event.type].values():
+                    for func in module_events:
+                        thread.start_new_thread(func, (self.get_server(conn), event, self))
+
+            do_nothing = lambda c, e: None
+            custom_handler = getattr(self, "on_" + event.type, do_nothing)
+            custom_handler(conn, event)
 
 
         ########################################################################
@@ -212,10 +210,10 @@ class scrappy:
 
 
         ########################################################################
-        def on_connect(self, conn, event):
+        def on_welcome(self, conn, event):
             """Called when bot makes a connection to the server."""
-            self.process_events("connect", conn, event)
 
+            # May want ident code, but that could probably be something for a module
             #if self.identify == True:
             #	conn.privmsg("nickserv", "identify %s"
             #		% self.nickservpass)
@@ -229,7 +227,6 @@ class scrappy:
         ########################################################################
         def on_disconnect(self, conn, event):
             """Called when the connection to the server is closed."""
-            self.process_events("disconnect", conn, event)
             #Already quit!
             #conn.quit("Scrappy bot signing off.")
 
@@ -244,38 +241,6 @@ class scrappy:
             # Quit if this was the last connection
             if not connected:
                 sys.exit(0)
-
-        ########################################################################
-        def on_error(self, conn, event):
-            self.process_events("error", conn, event)
-
-        ########################################################################
-        def on_invite(self, conn, event):
-            self.process_events("invite", conn, event)
-
-        ########################################################################
-        def on_join(self, conn, event):
-            self.process_events("join", conn, event)
-
-        ########################################################################
-        def on_kick(self, conn, event):
-            self.process_events("kick", conn, event)
-
-        ########################################################################
-        def on_mode(self, conn, event):
-            self.process_events("mode", conn, event)
-
-        ########################################################################
-        def on_part(self, conn, event):
-            self.process_events("part", conn, event)
-
-        ########################################################################
-        def on_ping(self, conn, event):
-            self.process_events("ping", conn, event)
-
-        ########################################################################
-        def on_pong(self, conn, event):
-            self.process_events("pong", conn, event)
 
         ########################################################################
         def on_privmsg(self, conn, event):
@@ -299,7 +264,9 @@ class scrappy:
             event.cmdchar = server["cmdchar"]
             #event.source = event.target() # TODO: Explain this to me
 
-            self.process_events("privmsg", conn, event)
+            for module_events in self.events[event.type].values():
+                for func in module_events:
+                        thread.start_new_thread(func, (self.get_server(conn), event, self))
 
             #params = {'nick' : nick,
             #          'user' : user,
@@ -317,21 +284,6 @@ class scrappy:
             #for funcs in self.privmsg_events.itervalues():
             #    for f in funcs:
             #        thread.start_new_thread(f, (server, [nick, user, host, iscmd, cmd, event.target()], self))
-
-
-        ########################################################################
-        def on_privnotice(self, conn, event):
-            self.process_events("privnotice", conn, event)
-
-        ########################################################################
-        #right now this isn't used because it's assumed that privmsg == pubmsg
-        #this should probably be changed...
-        def on_pubmsg(self, conn, event):
-            self.process_events("pubmsg", conn, event)
-
-        ########################################################################
-        def on_quit(self, conn, event):
-            self.process_events("quit", conn, event)
 
         ################
         #Module Loading#
