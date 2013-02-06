@@ -50,6 +50,22 @@ class scrappy:
             self.config = ConfigParser.SafeConfigParser()
             self.config.read(CONFIG_NAME)
 
+            self.modules = {}
+
+            #our event lists.
+            #each module adds functions to be called to these events.
+            #each event handler calls all of the functions within its list.
+            # Event types are added as they are registered
+            self.events = {"privmsg":{},
+                            "pubmsg":{},
+                            "tick":{}}
+
+            #TODO: Necessary with using __import__?
+            sys.path.append(os.path.join(os.getcwd(), "modules"))
+            # Load these modules before any events occur, since core especially handles welcome
+            self.load_module("core")
+            self.load_module("modmanage")
+
             self.servers = {}
             required_items = ["cmdchar","nickname","username","realname",
                                 "server","port","channels", "ssl"]
@@ -77,36 +93,7 @@ class scrappy:
             self.ircsock = '' #this will be the socket
             self.lock = threading.Lock()
 
-            #our event lists.
-            #each module adds functions to be called to these events.
-            #each event handler calls all of the functions within its list.
-            self.events = {"connect": {},
-                            "disconnect": {},
-                            "error": {},
-                            "invite": {},
-                            "join": {},
-                            "kick": {},
-                            "load": {},
-                            "mode": {},
-                            "msg": {},
-                            "part": {},
-                            "ping": {},
-                            "pong": {},
-                            "privmsg": {},
-                            "privnotice": {},
-                            "pubmsg": {},
-                            "privmsg": {},
-                            "pubnotice": {},
-                            "quit": {},
-                            "tick": {}}
 
-            self.modules = {}
-            #TODO: Necessary with using __import__?
-            sys.path.append(os.path.join(os.getcwd(), "modules"))
-
-            #need to load a few modules here - the rest are done elsewhere
-            self.load_module("modmanage")
-            self.load_module("core")
 
             #start the bot
             self.__main()
