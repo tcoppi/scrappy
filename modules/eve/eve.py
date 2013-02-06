@@ -13,7 +13,8 @@ class eve(Module):
 
         scrap.register_event("eve", "msg", self.distribute)
 
-        self.register_cmd("eve", self.eve)
+        self.register_cmd("eve-wallet", self.wallet)
+        self.register_cmd("eve-skill", self.skill)
         self.register_cmd("eve-add", self.eve_add)
 
     def setup_table(self, server):
@@ -25,18 +26,40 @@ class eve(Module):
         db_conn.commit()
         db_conn.close()
 
-    def eve(self, server, event, bot):
-        """ List all characters right now """
+    def skill(self, server, event, bot):
         c = server["connection"]
 
-        self.setup_table(server["servername"])
-        db_conn = self.get_db()
-        db_curs = db_conn.cursor()
-        sql = "SELECT id, key FROM %s WHERE name=? " % server["servername"]
-        db_curs.execute(sql, (event.nick,))
+        credentials = self.get_credentials(server["servername"], event.nick)
+        if credentials is None:
+            c.privmsg(event.target, "%s isn't in the database, see the %seve-add command" % (event.nick, server["cmdchar"]))
+            return
 
-        credentials = db_curs.fetchone()
-        db_conn.close()
+        (eve_id, eve_vcode) = credentials
+
+        api = eveapi.EVEAPIConnection(cacheHandler=EveCache())
+        auth = api.auth(keyID=eve_id, vCode=eve_vcode)
+        result = auth.account.Characters()
+
+        skills = api.eve.SkillTree()
+
+        for character in result.characters:
+            c.privmsg(event.target, "Training queue for %s" % character.name)
+            queue = auth.char.SkillQueue(characterID=character.characterID)
+            for training_skill in queue.skillqueue:
+                # Oh boy, this is going to be horrible.
+                for group in skills.skillGroups:
+                    for skill in group.skills:
+                        if skill.typeID == training_skill.typeID:
+                            c.privmsg(event.target, "%s: %s to level %s" % (group.groupName, skill.typeName, training_skill.level))
+
+
+
+
+    def wallet(self, server, event, bot):
+        """ List all character wallets """
+        c = server["connection"]
+
+        credentials = self.get_credentials(server["servername"], event.nick)
         if credentials is None:
             c.privmsg(event.target, "%s isn't in the database, see the %seve-add command" % (event.nick, server["cmdchar"]))
             return
@@ -81,3 +104,16 @@ class eve(Module):
 
         db_conn.commit()
         db_conn.close()
+
+    def get_credentials(self, server, nick):
+        self.setup_table(server)
+        db_conn = self.get_db()
+        db_curs = db_conn.cursor()
+        sql = "SELECT id, key FROM %s WHERE name=? " % server
+        db_curs.execute(sql, (nick,))
+
+        credentials = db_curs.fetchone()
+        db_conn.close()
+        return credentials
+
+
