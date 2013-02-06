@@ -153,6 +153,10 @@ class scrappy:
                     server["connection"].quit("BAIL OUT!!")
 
         ########################################################################
+        def shutdown(self, code=0):
+            sys.exit(code)
+
+        ########################################################################
         def get_server(self, conn):
             for server in self.servers:
                 server = self.servers[server]
@@ -167,13 +171,10 @@ class scrappy:
         def register_event(self, modname, event_type, func):
             """Call this with an event_type and a function to call when that event_type happens."""
 
-            if not event_type in self.events:
-                self.logger.error("I don't know what an %s event is." % event_type)
-                return
-
-            event_dict = self.events[event_type]
+            event_dict = self.events.setdefault(event_type, {})
             event_dict.setdefault(modname, set()).add(func)
             #TODO: Catchall msg event as well as separate privmsg and pubmsg events?
+            # TODO: Nuke this. Modules can decide if they want both.
             if event_type == "msg":
                 self.events["privmsg"].setdefault(modname, set()).add(func)
                 self.events["pubmsg"].setdefault(modname, set()).add(func)
@@ -207,40 +208,6 @@ class scrappy:
             for module_events in self.events["tick"].values():
                 for func in module_events:
                     thread.start_new_thread(func, (self.get_server(conn), self))
-
-
-        ########################################################################
-        def on_welcome(self, conn, event):
-            """Called when bot makes a connection to the server."""
-
-            # May want ident code, but that could probably be something for a module
-            #if self.identify == True:
-            #	conn.privmsg("nickserv", "identify %s"
-            #		% self.nickservpass)
-
-            #join channels
-            server = self.get_server(conn)
-            for chan in server["channels"]:
-                if ircclient.is_channel(chan):
-                    conn.join(chan)
-
-        ########################################################################
-        def on_disconnect(self, conn, event):
-            """Called when the connection to the server is closed."""
-            #Already quit!
-            #conn.quit("Scrappy bot signing off.")
-
-            #do we need to clean stuff up?
-            connected = False
-            for server in self.servers.values():
-                # TODO: Set failed connections to a closed connection object or something instead of None
-                if server["connection"] is not None:
-                    if server["connection"].is_connected():
-                        connected = True
-
-            # Quit if this was the last connection
-            if not connected:
-                sys.exit(0)
 
         ########################################################################
         def on_privmsg(self, conn, event):

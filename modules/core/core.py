@@ -3,6 +3,8 @@
 import os
 import sys
 
+from irclib import client as ircclient
+
 from module import Module
 
 class core(Module):
@@ -10,6 +12,8 @@ class core(Module):
         super(core, self).__init__(scrap)
 
         scrap.register_event("core", "msg", self.distribute)
+        scrap.register_event("core", "welcome", self.join_default)
+        scrap.register_event("core", "disconnect", self.check_connections)
 
         self.register_cmd("help", self.help_cmd)
         self.register_cmd("join", self.join_cmd)
@@ -33,7 +37,6 @@ class core(Module):
         else:
             c.privmsg(event.target, "Help list too long, specify a module (see %smodlist.)" % server["cmdchar"])
 
-
     def join_cmd(self, server, event, bot):
         """join a channel"""
         c = server["connection"]
@@ -55,4 +58,17 @@ class core(Module):
             # Just in case execv fails
             sys.exit(0)
 
+    def join_default(self, server, event, bot):
+        for channel in server["channels"]:
+            if ircclient.is_channel(channel):
+                server["connection"].join(channel)
 
+    def check_connections(self, server, event, bot):
+        connected = False
+        for server in bot.servers.values():
+            if server["connection"] is not None:
+                if server["connection"].is_connected():
+                    connected = True
+        if not connected:
+            # No more events should be going, so we're ok to shut down
+            bot.shutdown()
