@@ -1,5 +1,7 @@
 # Eve API module
 
+import time
+
 import eveapi.eveapi as eveapi
 
 from module import Module
@@ -29,9 +31,9 @@ class eve(Module):
     def skill(self, server, event, bot):
         c = server["connection"]
 
-        credentials = self.get_credentials(server["servername"], event.nick)
+        credentials = self.get_credentials(server["servername"], event.source.nick)
         if credentials is None:
-            c.privmsg(event.target, "%s isn't in the database, see the %seve-add command" % (event.nick, server["cmdchar"]))
+            c.privmsg(event.target, "%s isn't in the database, see the %seve-add command" % (event.source.nick, server["cmdchar"]))
             return
 
         (eve_id, eve_vcode) = credentials
@@ -50,7 +52,8 @@ class eve(Module):
                 for group in skills.skillGroups:
                     for skill in group.skills:
                         if skill.typeID == training_skill.typeID:
-                            c.privmsg(event.target, "%s: %s to level %s" % (group.groupName, skill.typeName, training_skill.level))
+                            time_str = time.strftime("%B %d %H:%M:%S",time.gmtime(training_skill.endTime))
+                            c.privmsg(event.target, "%s: %s to level %s. Ends %s." % (group.groupName, skill.typeName, training_skill.level, time_str))
 
 
 
@@ -59,9 +62,9 @@ class eve(Module):
         """ List all character wallets """
         c = server["connection"]
 
-        credentials = self.get_credentials(server["servername"], event.nick)
+        credentials = self.get_credentials(server["servername"], event.source.nick)
         if credentials is None:
-            c.privmsg(event.target, "%s isn't in the database, see the %seve-add command" % (event.nick, server["cmdchar"]))
+            c.privmsg(event.target, "%s isn't in the database, see the %seve-add command" % (event.source.nick, server["cmdchar"]))
             return
 
         (eve_id, eve_vcode) = credentials
@@ -79,28 +82,27 @@ class eve(Module):
         """ Add account to eve using <ID> <VCODE> """
         c = server["connection"]
 
-        tokens = event.cmd.split(" ")
-        if len(tokens) < 3:
+        if len(event.tokens) < 3:
             c.privmsg(event.target, "Not enough arguments, <ID> and <VCODE> required.")
             return
 
-        eve_id = tokens[1]
-        eve_vcode = tokens[2]
+        eve_id = event.tokens[1]
+        eve_vcode = event.tokens[2]
 
         self.setup_table(server["servername"])
         db_conn = self.get_db()
         db_curs = db_conn.cursor()
 
         sql = "SELECT 1 FROM %s WHERE name=?" % server["servername"]
-        db_curs.execute(sql, (event.nick,))
+        db_curs.execute(sql, (event.source.nick,))
         if db_curs.fetchone() is None:
             sql = "INSERT INTO %s (name, id, key) VALUES (?, ?, ?)" % server["servername"]
-            db_curs.execute(sql,(event.nick, eve_id, eve_vcode))
-            c.privmsg(event.target, "Added %s to the database with ID %s" % (event.nick, eve_id))
+            db_curs.execute(sql,(event.source.nick, eve_id, eve_vcode))
+            c.privmsg(event.target, "Added %s to the database with ID %s" % (event.source.nick, eve_id))
         else:
             sql = "UPDATE %s SET id=?,key=? WHERE name=?" % server["servername"]
-            db_curs.execute(sql, (eve_id, eve_vcode, event.nick))
-            c.privmsg(event.target, "Updated %s in the database to ID %s" % (event.nick, eve_id))
+            db_curs.execute(sql, (eve_id, eve_vcode, event.source.nick))
+            c.privmsg(event.target, "Updated %s in the database to ID %s" % (event.source.nick, eve_id))
 
         db_conn.commit()
         db_conn.close()
