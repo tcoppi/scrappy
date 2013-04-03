@@ -18,17 +18,20 @@ class floatmod(Module):
 
     def float_cmd(self, server, event, bot):
         c = server["connection"]
-        """"""
 
-        param = event.cmd.split(" ")[1]
+        if len(event.tokens) < 2:
+            c.privmsg(event.target, "Not enough arguments, <NUMBER> required.")
+            return
+
+        number = event.tokens[1]
 
         try:
-            num = float(param)
+            num = float(number)
         except ValueError:
             try:
-                num = int(param, 16)
+                num = int(number, 16)
             except ValueError:
-                c.privmsg(event.target,("%s: Invalid number") % param)
+                c.privmsg(event.target,("%s: Invalid number") % number)
                 return
 
         tmp = struct.pack("!f", num)
@@ -37,24 +40,27 @@ class floatmod(Module):
         tmp3 = struct.pack("!q", num)
 
         c.privmsg(event.target,("%s: 32bit float:0x%s | 2's complement int: 0x%s | 64bit float:0x%s | 2's complement long: 0x%s" % \
-            (param,binascii.hexlify(tmp),binascii.hexlify(tmp1),binascii.hexlify(tmp2),binascii.hexlify(tmp3))))
+            (number,binascii.hexlify(tmp),binascii.hexlify(tmp1),binascii.hexlify(tmp2),binascii.hexlify(tmp3))))
 
     def bs_cmd(self, server, event, bot):
-        """"""
 
         c = server["connection"]
 
-        param = event.cmd.split(" ")[1]
+        if len(event.tokens) < 2:
+            c.privmsg(event.target, "Not enough arguments, <NUMBER> required.")
+            return
+
+        number = event.tokens[1]
 
         try:
-            num = int(param)
+            num = int(number)
         except ValueError:
             try:
-                num = int(param, 16)
+                num = int(number, 16)
             except ValueError:
-                c.privmsg(event.target,("%s: Invalid number") % param)
+                c.privmsg(event.target,("%s: Invalid number") % number)
                 return
 
         tmp = struct.pack("<i", num)
 
-        c.privmsg(event.target,("%s: 0x%s" % (param,binascii.hexlify(tmp))))
+        c.privmsg(event.target,("%s: 0x%s" % (number,binascii.hexlify(tmp))))

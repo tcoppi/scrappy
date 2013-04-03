@@ -13,12 +13,11 @@ class dns(Module):
 
     def dns(self, server, event, bot):
         c = server["connection"]
-        param = event.cmd.split(" ")[1:]
-        print param
-        if len(param) == 0:
+
+        if len(event.tokens) == 1:
             msg = "Nothing to look up, zoob!"
         else:
-            addr = param[0]
+            addr = event.tokens[1]
             if addr[-1].isdigit():
                 try:
                     host, alias, ip = socket.gethostbyaddr(addr)

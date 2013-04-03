@@ -47,10 +47,12 @@ class Module(object):
         return docstrings
 
     def distribute(self, server, event, bot):
-        event.arg = event.arguments[0]
         event.tokens = event.arguments[0].split(" ")
+        event.arg = event.tokens[1:]
         event.command = event.tokens[0][1:]
-        if event.arg[0] == server["cmdchar"]: # event is command
+        cmdchar = event.tokens[0][0]
+
+        if cmdchar == server["cmdchar"]: # event is command
             if event.command in self.command_callbacks:
                 for callback in self.command_callbacks[event.command]:
                     start = time.time()

@@ -15,7 +15,8 @@ class gcalc(Module):
 
     def gcalc(self, server, event, bot):
         c = server["connection"]
-        query = event.cmd[6:]
+
+        query = event.tokens[1:]
         query = urllib.urlencode({'q':query})
 
         if len(query) == 0:

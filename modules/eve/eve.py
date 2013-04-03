@@ -52,7 +52,7 @@ class eve(Module):
                 for group in skills.skillGroups:
                     for skill in group.skills:
                         if skill.typeID == training_skill.typeID:
-                            time_str = time.strftime("%B %d %H:%M:%S",time.gmtime(training_skill.endTime))
+                            time_str = time.strftime("%B %d %H:%M:%S Central",time.localtime(training_skill.endTime))
                             c.privmsg(event.target, "%s: %s to level %s. Ends %s." % (group.groupName, skill.typeName, training_skill.level, time_str))
 
 

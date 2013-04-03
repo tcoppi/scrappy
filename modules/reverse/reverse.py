@@ -13,10 +13,13 @@ class reverse(Module):
         """Takes a string and reverses it.  Simple."""
         c = server["connection"]
 
-        params = event.cmd.split(" ")[1:]
-        if len(params) > 0:
+        if len(event.tokens) < 2:
+            c.privmsg(event.target, "Not enough arguments")
+            return
+
+        if len(event.arg) > 0:
             # Squishes all the whitespace. oh well.
-            rev = list(" ".join(params))
+            rev = list(" ".join(event.arg))
             rev.reverse()
             strng = ''.join(rev)
         else:

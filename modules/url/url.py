@@ -13,26 +13,28 @@ class url(Module):
     def url(self, server, event, bot):
         c = server["connection"]
 
-
         try:
             with open("urldb", "r+") as fp:
                 db = cPickle.load(fp)
         except:
             db = {}
 
-        params = event.cmd.split(" ")[1:]
-        if len(params) > 1:
-            identifier = params[0]
-            url = params[1]
+        if len(event.arg) > 1:
+            identifier = event.arg[0]
+            url = event.arg[1]
 
             db[identifier] = url
 
             with open("urldb", "w") as fp:
                 cPickle.dump(db, fp)
 
-        elif len(params) == 1:
-            identifier = params[0]
-            url = db[identifier]
+        elif len(event.arg) == 1:
+            identifier = event.arg[0]
+            if identifier in db:
+                url = db[identifier]
+            else:
+                c.privmsg(event.target, "This URL isn't in the database!")
+                return
 
         else:
             c.privmsg(event.target, "You need to have a url to look up or store!")

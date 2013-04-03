@@ -16,42 +16,42 @@ class todo(Module):
     def todo(self, server, event, bot):
         conn = server["connection"]
 
-        tokens = event.cmd.strip().split(" ")[1:]
-        if len(tokens) == 0:
+
+        if len(event.arg) == 0:
             self.list_todo(server, event, bot)
             return
 
         try:
-            num = int(tokens[0])
-            if len(tokens) == 2:
-                if tokens[1] == "del":
+            num = int(event.arg[0])
+            if len(event.arg) == 2:
+                if event.arg[1] == "del":
                     deleted = self.remove(num, server, event.target)
                     if deleted:
                         conn.privmsg(event.target, "Removed todo %d." % num)
                     else:
                         conn.privmsg(event.target, "Todo %d does not exist." % num)
 
-                elif tokens[1] == "done":
+                elif event.arg[1] == "done":
                     done = self.set_done(num, server, event.target)
                     if done:
                         conn.privmsg(event.target, "Todo %d set done." % num)
                     else:
                         conn.privmsg(event.target, "Todo %d does not exist." % num)
-                elif tokens[1] == "++":
+                elif event.arg[1] == "++":
                     raised = self.raise_priority(num, server, event.target)
                     if raised:
                         conn.privmsg(event.target, "Todo %d priority raised." % num)
                     else:
                         conn.privmsg(event.target, "Todo %d does not exist." % num)
-                elif tokens[1] == "--":
+                elif event.arg[1] == "--":
                     lowered = self.lower_priority(num, server, event.target)
                     if lowered:
                         conn.privmsg(event.target, "Todo %d priority lowered." % num)
                     else:
                         conn.privmsg(event.target, "Todo %d does not exist." % num)
-            elif len(tokens) > 2:
+            elif len(event.arg) > 2:
                 conn.privmsg(event.target, "Invalid operation on todo %d." % num)
-            elif len(tokens) < 2:
+            elif len(event.arg) < 2:
                 todo = self.get_todo(num, server, event.target)
                 if todo is not None:
 
@@ -65,8 +65,7 @@ class todo(Module):
                     conn.privmsg(event.target, "Todo %d does not exist." % num)
 
         except ValueError:
-            # TODO: some way to automate this in Module
-            todo_item = event.cmd[event.cmd.find(" ")+1:]
+            todo_item = " ".join(event.arg)
             num = self.add_todo(todo_item, server, event.target)
             conn.privmsg(event.target, "Todo %d added." % num)
 
