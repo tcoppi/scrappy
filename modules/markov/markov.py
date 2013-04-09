@@ -121,6 +121,10 @@ class markov(Module):
         """ Should not be called directly """
         # since this doesn't go via distribute, need to add some helpers
         event.tokens = event.arguments[0].split(" ")
+        if not event.tokens:
+            return
+        if not event.tokens[0]:
+            return
         event.arg = event.tokens[1:]
         event.command = event.tokens[0][1:]
         cmdchar = event.tokens[0][0]
