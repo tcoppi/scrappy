@@ -5,9 +5,11 @@
 #names and such will be similar.
 
 import random
+import os.path
 import pickle
 import re
 import threading
+import time
 import logging
 
 from module import Module
@@ -30,10 +32,11 @@ class markov(Module):
         scrap.register_event("markov", "msg", self.distribute)
         scrap.register_event("markov", "msg", self.markov_learn)
 
-        self.register_cmd("markov_file", self.markov_file)
         self.register_cmd("talk", self.markov_talk)
         self.register_cmd("mkdump", self.markov_dump)
         self.register_cmd("mkload", self.markov_load)
+        self.register_cmd("mkadd", self.markov_file)
+#        self.register_cmd("markov_file", self.markov_file)
         self.register_cmd("stats", self.markov_stats)
 #    scrap.register_event("markov", "msg", tweet)
 
@@ -82,40 +85,38 @@ class markov(Module):
 
 
     def markov_file(self, server, event, bot):
-        c = server["connection"]
         """Load a plaintext file."""
+        c = server["connection"]
+
         if len(event.tokens) < 2:
             c.privmsg(event.target, "Not enough arguments fo file.")
 
         mfname = event.tokens[1]
 
-        with self.lock:
-            try:
-                mf = open(mfname, 'r')
-            except IOError:
-                c.privmsg(event.target, "Error loading file %s." % mfname)
-                return
+        try:
+            valid_files = os.listdir('markov_input')
+            if mfname not in valid_files:
+                c.privmsg(event.target, "File %s doesn't exist." % mfname)
+            size = os.path.getsize('markov_input/'+mfname)
+            mf = open('markov_input/'+mfname, 'r')
+        except IOError:
+            c.privmsg(event.target, "Error loading file %s." % mfname)
+            return
 
-            c.privmsg(event.target, "%s successfully opened.  Reading..." % mfname)
-            for line in mf.readlines():
-                words = [x.strip() for x in line.split(" ") if not x.isspace()]
-                if len(words) <= 1:
-                    continue
+        c.privmsg(event.target, "%s successfully opened. Reading %d bytes..." % (mfname, size))
+        start = time.time()
+        for line in mf:
+            cur_time = time.time()
+            if cur_time-start > 10:
+                start = cur_time
+                c.privmsg(event.target, "Still loading, %d bytes left to go" % size)
 
-                w1 = w2 = "\n"
+            size -= len(line)
 
-                for w in words:
-                    self.statetab.setdefault((w1, w2), []).append(w)
-                    w1, w2 = w2, w
+            self.learn_sentence(line.split())
 
-                self.statetab.setdefault((w1, w2), []).append("\n")
-
-            c.privmsg(event.target, "Done!")
-            mf.close()
-
-        with self.lock:
-            pkfile = open("%s.mk" % mf, "w+")
-            pickle.dump(self.statetab, pkfile)
+        c.privmsg(event.target, "Done!")
+        mf.close()
 
     def markov_learn(self, server, event, bot):
         """ Should not be called directly """
@@ -130,18 +131,36 @@ class markov(Module):
         cmdchar = event.tokens[0][0]
 
 
-        self.logger.info("in learn")
-
         if cmdchar == server["cmdchar"]:
             return
 
 #        if event.cmd == "talk" or event.cmd == "markov_stats" or event.cmd == "mkload" or event.cmd == "mkdump" or event.cmd == "markov_file":
 #            return
 
+        self.learn_sentence(event.tokens)
+
         c = server["connection"]
+
+        if self.nickmatch.search(event.arguments[0]) and bot.autorep == 1:
+            tmp = self.emit_chain(random.choice(event.tokens))
+
+            if len(tmp) <= 2:
+                return
+
+            c.privmsg(event.target, "%s: %s" % (event.source.nick, tmp))
+            return
+
+        #randomly reply
+        if random.randint(0, 7) == 0 and bot.talk == 1:
+            c.privmsg(event.target, "%s" %
+                    (self.emit_chain(random.choice(event.tokens))))
+
+    def learn_sentence(self,tokens):
+        """Feed me a tokenized sentence"""
+        #self.logger.info("in learn")
         with self.lock:
 
-            words = [x.strip() for x in event.tokens if not x.isspace()]
+            words = [x.strip() for x in tokens if not x.isspace()]
             if len(words) <= 1:
                 return
 
@@ -159,20 +178,6 @@ class markov(Module):
                 w1, w2 = w2, i
 
             self.statetab.setdefault((w1, w2), []).append("\n")
-
-            if self.nickmatch.search(event.arguments[0]) and bot.autorep == 1:
-                tmp = self.emit_chain(random.choice(event.tokens))
-
-                if len(tmp) <= 2:
-                    return
-
-                c.privmsg(event.target, "%s: %s" % (event.source.nick, tmp))
-                return
-
-            #randomly reply
-            if random.randint(0, 7) == 0 and bot.talk == 1:
-                c.privmsg(event.target, "%s" %
-                        (self.emit_chain(random.choice(event.tokens))))
 
 
     def emit_chain(self, key):
@@ -218,8 +223,11 @@ class markov(Module):
         c = server["connection"]
 
         if len(event.tokens) < 2:
-            c.privmsg(event.target, "Not enough arguments fo talk.")
-            return
+            try:
+                key = random.choice(self.statetab[("\n","\n")])
+            except KeyError:
+                c.privmsg(event.target, "Don't wanna talk!")
+                return
 
         try:
             key = random.choice([event.tokens[1].upper(), event.tokens[1].lower()])
