@@ -17,8 +17,8 @@ from module import Module
 class markov(Module):
     def __init__(self,scrap):
         super(markov, self).__init__(scrap)
-        self.last = ""
-
+        self.delay_mean = 10
+        self.delay_stdev = 4
         self.nickmatch = None
         self.statetab = {}
         self.w1 = "\n"
@@ -37,7 +37,8 @@ class markov(Module):
         self.register_cmd("mkload", self.markov_load)
         self.register_cmd("mkadd", self.markov_file)
 #        self.register_cmd("markov_file", self.markov_file)
-        self.register_cmd("stats", self.markov_stats)
+        self.register_cmd("mkstats", self.markov_stats)
+        self.register_cmd("mkdelay", self.markov_delay)
 #    scrap.register_event("markov", "msg", tweet)
 
         self.nickmatch = re.compile(scrap.servers.itervalues().next()['nickname'])
@@ -48,6 +49,19 @@ class markov(Module):
         c = server["connection"]
 
         c.privmsg(event.target, "chains: %d" % len(self.statetab.items()))
+
+    def markov_delay(self, server, event, bot):
+        c = server["connection"]
+        if len(event.tokens) < 3:
+            c.privmsg(event.target, "Need a mean AND stdev as arguments.")
+
+        try:
+            self.delay_mean = float(event.tokens[1])
+            self.delay_stdev = float(event.tokens[2])
+            c.privmsg(event.target, "Delay is now N(%.2f,%.2f)" % (self.delay_mean, self.delay_stdev))
+        except:
+            c.privmsg(event.target, "I didn't like the format those were in, try again.")
+
 
     #loads in a previously pickled saved state
     def markov_load(self, server, event, bot):
@@ -120,6 +134,7 @@ class markov(Module):
 
     def markov_learn(self, server, event, bot):
         """ Should not be called directly """
+        start = time.time()
         # since this doesn't go via distribute, need to add some helpers
         event.tokens = event.arguments[0].split(" ")
         if not event.tokens:
@@ -130,30 +145,43 @@ class markov(Module):
         event.command = event.tokens[0][1:]
         cmdchar = event.tokens[0][0]
 
-
         if cmdchar == server["cmdchar"]:
             return
 
 #        if event.cmd == "talk" or event.cmd == "markov_stats" or event.cmd == "mkload" or event.cmd == "mkdump" or event.cmd == "markov_file":
 #            return
 
-        self.learn_sentence(event.tokens)
-
         c = server["connection"]
 
+        delay = random.gauss(self.delay_mean, self.delay_stdev)
+        self.logger.debug("Reply delay N(%f,%f) is %f" % (self.delay_mean, self.delay_stdev, delay))
+
         if self.nickmatch.search(event.arguments[0]) and bot.autorep == 1:
-            tmp = self.emit_chain(random.choice(event.tokens))
+            counter = 0
+            tmp = []
+            while len(tmp) <= 2 and counter < 10:
+                tmp = self.emit_chain(random.choice(event.tokens))
 
-            if len(tmp) <= 2:
-                return
+                counter += 1
 
-            c.privmsg(event.target, "%s: %s" % (event.source.nick, tmp))
-            return
+            if counter < 10:
+                now = time.time()
+                delta = now-start
+                if delta < delay:
+                    time.sleep(delay-delta)
+                c.privmsg(event.target, "%s: %s" % (event.source.nick, " ".join(tmp)))
 
         #randomly reply
         if random.randint(0, 7) == 0 and bot.talk == 1:
+            now = time.time()
+            delta = now-start
+            if delta < delay:
+                time.sleep(delay-delta)
+            self.last_talked = time.time()
             c.privmsg(event.target, "%s" %
-                    (self.emit_chain(random.choice(event.tokens))))
+                    (" ".join(self.emit_chain(random.choice(event.tokens)))))
+
+        self.learn_sentence(event.tokens)
 
     def learn_sentence(self,tokens):
         """Feed me a tokenized sentence"""
@@ -175,13 +203,12 @@ class markov(Module):
             #Then, set w1 to w2 and w2 to i, so the chain moves forward.
             for i in words:
                 self.statetab.setdefault((w1, w2), []).append(i)
-                w1, w2 = w2, i
+                w1, w2 = w2, i.lower()
 
             self.statetab.setdefault((w1, w2), []).append("\n")
 
 
     def emit_chain(self, key):
-        self.logger.info("in self.emit_chain")
         i = 0
 
         w1 = w2 = "\n"
@@ -192,29 +219,25 @@ class markov(Module):
 #    if(key != " "):
 #     retval = key + " "
 #    else:
-        retval = ""
+        retval = []
 
-        if key != " ":
-            w2 = key
+        w2 = key.lower()
 
         while 1:
             try:
                 newword = random.choice(self.statetab[(w1, w2)]).strip()
             except KeyError:
-                last = retval
-                return retval
+                break
 
-
-            retval = retval + newword + " "
+            retval.append(newword)
             w1, w2 = w2, newword
 
             i = i + 1
 
             #max of rand words if we don't hit a space or other error
             if i >= random.randint(5, 50):
-                last = retval
-                return retval
-        last = retval
+                break
+
         return retval
 
     def markov_talk(self, server, event, bot):
@@ -228,19 +251,17 @@ class markov(Module):
             except KeyError:
                 c.privmsg(event.target, "Don't wanna talk!")
                 return
+        else:
+            key = event.tokens[1]
 
-        try:
-            key = random.choice([event.tokens[1].upper(), event.tokens[1].lower()])
-        except IndexError:
-            key = " "
+        tmp = []
+        counter = 0
+        while len(tmp) < 2 and counter < 10:
+            tmp = self.emit_chain("\n")
+            counter += 1
 
-        tmp = self.emit_chain(key)
-        if len(tmp) <= 2:
-            return
-        if len(tmp.split()) <= 1:
-            tmp = self.emit_chain(" ")
-        last = ("%s %s" % (key, tmp)).lstrip()
-        c.privmsg(event.target, ("%s %s" % (key, tmp)).lstrip())
+        if tmp:
+            c.privmsg(event.target, ("%s %s" % (key, " ".join(tmp))).lstrip())
 
 
 
