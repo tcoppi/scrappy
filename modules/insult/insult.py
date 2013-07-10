@@ -78,15 +78,36 @@ class insult(Module):
 		self.register_cmd("insult", self.insult_me)
 		
 	def insult_me(self, server, event, bot):
+		'''Usage: "insult [-p | foo]" where foo is someone/thing to insult.  Leave blank to make the bot insult yourself.'''
 		connection = server["connection"]
 		
-		adjective = self.adjectives[randint(0, len(self.adjectives)-1)]
-		bodypart = self.bodyparts[randint(0, len(self.bodyparts)-1)]
-		profession = self.professions[randint(0, len(self.professions)-1)]
+		#save the lengths of each insult component list
+		a = len(self.adjectives)
+		b = len(self.bodyparts)
+		p = len(self.professions)
 		
-		insult = "%s, you're a(n) %s %s %s!" % (event.source.nick, adjective, bodypart, profession)
+		#select a random word from each insult component
+		adjective = self.adjectives[randint(0, a-1)]
+		bodypart = self.bodyparts[randint(0, b-1)]
+		profession = self.professions[randint(0, p-1)]
 		
-		print insult
+		#check for '-p' or 'word(s)' passed to insult
+		if len(event.tokens) >= 2:
+			arg = event.tokens[1]
+			
+			#return number of possible insult combinations if -p flag is given
+			if arg == "-p":
+				possible = a*b*p
+				insult = "I know %d adjectives, %d bodyparts, and %d professions for a total of %d possible insult combinations!" % (a, b, p, possible)
+			
+			#no flag given, but a word or words was given, so insult word(s), stripping extra spaces
+			else:
+				insult = "%s is a(n) %s %s %s!" % (' '.join(event.tokens[1:]).strip(), adjective, bodypart, profession)
+				
+		#no arguments given so insult the user
+		else:
+			insult = "%s, you're a(n) %s %s %s!" % (event.source.nick, adjective, bodypart, profession)
+		
 		
 		connection.privmsg(event.target, insult)
 		
