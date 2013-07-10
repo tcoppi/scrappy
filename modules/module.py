@@ -28,7 +28,6 @@ class Module(object):
     def get_db(self):
         self.logger.debug("Using db db/%s.db" % self.__class__.__name__)
         conn = sqlite3.connect('db/%s.db' % self.__class__.__name__)
-        conn.text_factory = sqlite3.OptimizedUnicode
         return conn
 
     def register_cmd(self, cmd, callback):
