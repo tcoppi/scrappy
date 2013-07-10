@@ -43,7 +43,17 @@ class markov(Module):
 
         self.nickmatch = re.compile(scrap.servers.itervalues().next()['nickname'])
 
+        self.setup_table()
+
         random.seed()
+
+    def setup_table(self):
+        db_conn = self.get_db()
+        sql = "CREATE TABLE IF NOT EXISTS chains (w1 BLOB, w2 BLOB, next BLOB)"
+        db_cursor = db_conn.cursor()
+        db_cursor.execute(sql)
+        db_conn.commit()
+        db_conn.close()
 
     def markov_stats(self, server, event, bot):
         c = server["connection"]
@@ -119,6 +129,8 @@ class markov(Module):
 
         c.privmsg(event.target, "%s successfully opened. Reading %d bytes..." % (mfname, size))
         start = time.time()
+        counter = 0
+        chains = {}
         for line in mf:
             cur_time = time.time()
             if cur_time-start > 10:
@@ -127,7 +139,36 @@ class markov(Module):
 
             size -= len(line)
 
-            self.learn_sentence(line.split())
+            w1 = "\n"
+            w2 = "\n"
+
+            for token in line.split():
+                chains.setdefault((w1, w2), []).append(token)
+                w1, w2 = w2, token.lower()
+
+            counter += 1
+            if counter%100000 == 0:
+                self.logger.debug("Iteration %d, dumping" % counter)
+                db_conn = self.get_db()
+                db_curs = db_conn.cursor()
+                for (k, v) in chains.items():
+                    (w1, w2) = k
+                    self.add_next(w1, w2, v, db_curs)
+                chains = {}
+                db_conn.commit()
+                db_conn.close()
+
+        self.logger.debug("Iteration %d, dumping" % counter)
+        db_conn = self.get_db()
+        db_curs = db_conn.cursor()
+        for (k, v) in chains.items():
+            (w1, w2) = k
+            self.add_next(w1, w2, v, db_curs)
+        chains = {}
+        db_conn.commit()
+        db_conn.close()
+
+
 
         c.privmsg(event.target, "Done!")
         mf.close()
@@ -183,16 +224,68 @@ class markov(Module):
 
         self.learn_sentence(event.tokens)
 
-    def learn_sentence(self,tokens):
+    def add_next(self, w1, w2, next_add, cursor=None):
+        if cursor is None:
+            db_conn = self.get_db()
+            db_curs = db_conn.cursor()
+        else:
+            db_curs = cursor
+        sql = "SELECT next from chains WHERE w1=? and w2=?"
+        try:
+            db_curs.execute(sql, (w1, w2))
+        except Exception, e:
+            self.logger.warning(e)
+            return
+        next_pickle = db_curs.fetchone()
+        if next_pickle is not None:
+            exists = True
+            next_list = pickle.loads(next_pickle[0])
+        else:
+            exists = False
+            next_list = []
+        next_list += next_add
+        next_pickle = pickle.dumps(next_list)
+        if exists:
+            sql = "UPDATE chains SET next=? WHERE w1=? and w2=?"
+            db_curs.execute(sql, (next_pickle,w1,w2))
+        else:
+            sql = "INSERT INTO chains (w1, w2, next) VALUES (?, ?, ?)"
+            db_curs.execute(sql, (w1,w2,next_pickle))
+
+        if cursor is None:
+            db_conn.commit()
+            db_conn.close()
+
+    def get_next(self, w1, w2, cursor=None):
+        if cursor is None:
+            db_conn = self.get_db()
+            db_curs = db_conn.cursor()
+        else:
+            db_curs = cursor
+        sql = "SELECT next from chains WHERE w1=? and w2=?"
+        db_curs.execute(sql, (w1, w2))
+        next_pickle = db_curs.fetchone()
+
+        if cursor is None:
+            db_conn.close()
+
+        if next_pickle is not None:
+            next_list = pickle.loads(next_pickle[0])
+            return unicode(random.choice(next_list))
+        else:
+            return None
+
+    def learn_sentence(self, tokens, cursor=None):
         """Feed me a tokenized sentence"""
         #self.logger.info("in learn")
         with self.lock:
 
-            words = [x.strip() for x in tokens if not x.isspace()]
+#            words = [x.strip() for x in tokens if not x.isspace()]
+            words = tokens
             if len(words) <= 1:
                 return
 
-            w1 = w2 = "\n"
+            w1 = w2 = u"\n"
 
             #go through every word and put them in a hash table.
             #EX the sentence "Mary had a little lamb"
@@ -202,11 +295,12 @@ class markov(Module):
             #
             #Then, set w1 to w2 and w2 to i, so the chain moves forward.
             for i in words:
-                self.statetab.setdefault((w1, w2), []).append(i)
-                w1, w2 = w2, i.lower()
+                #self.statetab.setdefault((w1, w2), []).append(i)
+                self.add_next(w1, w2, [i], cursor)
+                w1, w2 = w2, unicode(i.lower(),'utf8')
 
-            self.statetab.setdefault((w1, w2), []).append("\n")
-
+            self.add_next(w1, w2, [u"\n"])
+            #self.statetab.setdefault((w1, w2), []).append("\n")
 
     def emit_chain(self, key):
         i = 0
@@ -223,20 +317,15 @@ class markov(Module):
 
         w2 = key.lower()
 
-        while 1:
-            try:
-                newword = random.choice(self.statetab[(w1, w2)]).strip()
-            except KeyError:
-                break
-
-            retval.append(newword)
-            w1, w2 = w2, newword
-
+        db_conn = self.get_db()
+        db_curs = db_conn.cursor()
+        for i in range(1, random.randint(5,50)):
+            next_word = self.get_next(w1, w2, db_curs)
+            if next_word is not None:
+                retval.append(next_word)
+                w1, w2 = w2, next_word
             i = i + 1
-
-            #max of rand words if we don't hit a space or other error
-            if i >= random.randint(5, 50):
-                break
+        db_conn.close()
 
         return retval
 
