@@ -70,6 +70,12 @@ class insult(Module):
 		bodypart = self.insults['bodyparts'][randint(0, b-1)]
 		profession = self.insults['professions'][randint(0, p-1)]
 		
+		#insert a/an if adjective starts with a consonant/vowel
+		if adjective[0] in 'aeiou':
+			adjective = "an %s" % adjective
+		else:
+			adjective = "a %s" % adjective
+		
 		#check for '-p' or 'word(s)' passed to insult
 		if len(event.tokens) >= 2:
 			arg = event.tokens[1]
@@ -111,11 +117,11 @@ class insult(Module):
 			
 			#no flag given, but a word or words was given, so insult word(s), stripping extra spaces
 			else:
-				insult = "%s is a(n) %s %s %s!" % (' '.join(event.tokens[1:]).strip(), adjective, bodypart, profession)
+				insult = "%s is %s %s %s!" % (' '.join(event.tokens[1:]).strip(), adjective, bodypart, profession)
 				
 		#no arguments given so insult the user
 		else:
-			insult = "%s, you're a(n) %s %s %s!" % (event.source.nick, adjective, bodypart, profession)
+			insult = "%s, you're %s %s %s!" % (event.source.nick, adjective, bodypart, profession)
 		
 		
 		connection.privmsg(event.target, insult)
