@@ -221,7 +221,6 @@ class markov(Module):
             self.last_talked = time.time()
             c.privmsg(event.target, "%s" %
                     (" ".join(self.emit_chain(random.choice(event.tokens)))))
-        print "Learn: " + event.tokens
         self.learn_sentence(event.tokens)
 
     def add_next(self, w1, w2, next_add, cursor=None):
