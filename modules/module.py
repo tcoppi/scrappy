@@ -8,6 +8,8 @@ class ModuleException(Exception):
 
 # One object per scrappy!
 class Module(object):
+    models = []
+
     def __init__(self, scrap):
         self.command_callbacks = {}
         self.logger = logging.getLogger("scrappy.%s" % self.__class__.__name__)
@@ -20,15 +22,9 @@ class Module(object):
             self.logger.debug("Creating database directory.")
             os.mkdir("db")
 
-        conn = sqlite3.connect('db/%s.db' % self.__class__.__name__)
-        conn.close()
-
-
-    # Don't forget to close it!
-    def get_db(self):
-        self.logger.debug("Using db db/%s.db" % self.__class__.__name__)
-        conn = sqlite3.connect('db/%s.db' % self.__class__.__name__)
-        return conn
+        for model in self.models:
+            if not model.table_exists():
+                model.create_table()
 
     def register_cmd(self, cmd, callback):
         if cmd not in self.command_callbacks:
