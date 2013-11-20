@@ -13,8 +13,6 @@ import ssl
 import sys
 import thread, threading
 
-#import irclib_scrappy
-#import irclib
 from irclib import client as ircclient
 
 
@@ -24,25 +22,27 @@ from irclib import client as ircclient
 # WARNING - Things we would rather not happen (e.g., using a non-SSL connection)
 # ERROR - Deviations from normal operation (e.g., failed to connect to a server)
 # CRITICAL - Scrappy gonna die! But not before spitting out a final goodbye! (e.g., SIGINT)
-#logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=5)
+logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=5)
 
 
 irc_logger = logging.getLogger("irclib.client")
 # Change me if you want to see IRC DEBUG lines
 irc_logger.setLevel(logging.INFO)
 
-#this is our main bot class.  Once scrappy.py is called, an instance of this
-#class (our bot) gets created and some initialization is done.  The real work is
-#done via modules that get loaded here.
 class scrappy:
+    """This is our main bot class. Generally, everything past loading/unloading modules is provided
+    by external python modules themselves.
+    """
         def __init__(self):
+            """Initialize the scrapster
+            """
 
             self.logger = logging.getLogger("scrappy")
 
-            # TODO: Use logging module
             self.logger.info("Scrappy bot started.")
 
+            # Read config file at CONFIG_NAME
             if not os.path.exists(CONFIG_NAME):
                 self.logger.critical("Error: Configuration file '%s' not found." % CONFIG_NAME)
                 self.logger.critical("Copy %s to %s and modify as necessary." % (DEFAULT_CONFIG, CONFIG_NAME))
@@ -60,9 +60,9 @@ class scrappy:
                             "pubmsg":{},
                             "tick":{}}
 
-            #TODO: Necessary with using __import__?
             sys.path.append(os.path.join(os.getcwd(), "modules"))
-            # Load these modules before any events occur, since core especially handles welcome
+
+            # Load these modules before any events occur, since core handles server welcome message
             self.load_module("core")
             self.load_module("modmanage")
 
@@ -93,8 +93,6 @@ class scrappy:
             self.ircsock = '' #this will be the socket
             self.lock = threading.Lock()
 
-
-
             #start the bot
             self.__main()
 
@@ -112,7 +110,7 @@ class scrappy:
                     if server["ssl"]:
                         factory = ircclient.connection.Factory(wrapper=ssl.wrap_socket)
                     else:
-                        self.logger.warning("Hey, we really don't like you not using SSL")
+                        self.logger.warning("Hey, we really don't like you not using SSL!")
                         factory = ircclient.connection.Factory()
 
                     connection = self.ircsock.server().connect(server["server"], server["port"], server["nickname"],
@@ -123,15 +121,14 @@ class scrappy:
                     connection = None
 
                 #if all goes well, register handlers
-                #TODO: What ones are we missing?
                 if connection is not None:
                     connection.add_global_handler("all_events", self.process_event)
-                    connection.execute_every(5, self.on_tick, arguments=(connection,))
+                    # One second tick for timed functions
+                    connection.execute_every(1, self.on_tick, arguments=(connection,))
 
                 server["connection"] = connection
 
             #enter main event loop after this
-            #no code after here
             try:
                 self.ircsock.process_forever()
             except KeyboardInterrupt:
@@ -141,10 +138,20 @@ class scrappy:
 
         ########################################################################
         def shutdown(self, code=0):
+            """Exit
+
+            Keyword arguments:
+            code -- Exit code (default 0)
+            """
             sys.exit(code)
 
         ########################################################################
         def get_server(self, conn):
+            """Get the server associated with a connection
+
+            Arguments:
+            conn -- connection object
+            """
             for server in self.servers:
                 server = self.servers[server]
                 if conn == server["connection"]:
@@ -156,18 +163,26 @@ class scrappy:
         ###################
 
         def register_event(self, modname, event_type, func):
-            """Call this with an event_type and a function to call when that event_type happens."""
+            """Register a callback to an IRC event
+
+            Call this with an event_type and a function to call when that event_type happens.
+            Arguments:
+            modname -- Modules shortname
+            event_type -- Event type, see irclib/events.py for events
+            func -- Callback function, needs to have the signature func(server, event, scrappy)
+            """
 
             event_dict = self.events.setdefault(event_type, {})
             event_dict.setdefault(modname, set()).add(func)
-            #TODO: Catchall msg event as well as separate privmsg and pubmsg events?
             # TODO: Nuke this. Modules can decide if they want both.
             if event_type == "msg":
                 self.events["privmsg"].setdefault(modname, set()).add(func)
                 self.events["pubmsg"].setdefault(modname, set()).add(func)
 
         def unregister_event(self, event_type, func):
-                pass
+            """Not Implemented - Unregister a callback to an IRC event
+            """
+            pass
 
         ########################################################################
         ##################
@@ -175,13 +190,18 @@ class scrappy:
         ##################
 
         def process_event(self, conn, event):
-            #self.logger.log(5, "%s: %s" % (event.type, event.arguments))
+            """Processes IRC event on connection
 
+            Arguments:
+            conn -- IRC connection
+            event -- IRC event
+            """
             if event.type in self.events:
                 for module_events in self.events[event.type].values():
                     for func in module_events:
                         thread.start_new_thread(func, (self.get_server(conn), event, self))
 
+            # If the on_EVENT method doesn't exist, call a NOP-like function instead
             do_nothing = lambda c, e: None
             custom_handler = getattr(self, "on_" + event.type, do_nothing)
             custom_handler(conn, event)
@@ -189,14 +209,22 @@ class scrappy:
 
         ########################################################################
         def on_tick(self, conn):
+            """Calls the tick event callbacks
+
+            Arguments:
+            conn -- IRC connection
+            """
             for module_events in self.events["tick"].values():
                 for func in module_events:
                     thread.start_new_thread(func, (self.get_server(conn), self))
 
-        ################
-        #Module Loading#
-        ################
         def load_module(self, name):
+            """Loads module
+
+
+            Arguments:
+            name -- Name of module
+            """
             self.logger.debug("Loading module '%s'." % name)
             if name in self.modules:
                 self.logger.debug("Actually, module '%s' already loaded, reloading." % name)
@@ -225,10 +253,21 @@ class scrappy:
             return True
 
         def reload_module(self, name):
+            """Reloads module
+
+            Arguments:
+            name -- Name of module"""
             self.unload_module(name)
             return self.load_module(name)
 
         def unload_module(self, name):
+            """Unloads module
+
+            May not work consistently, see:
+            http://stackoverflow.com/questions/3105801/unload-a-module-in-python
+
+            Arguments:
+            name -- Name of module"""
             with self.lock:
                 if name in self.modules:
                     self.unregister_module(name)
@@ -244,6 +283,11 @@ class scrappy:
             return True
 
         def unregister_module(self, name):
+            """Unregisters module callbacks
+
+            Arguments:
+            name -- Name of module
+            """
             for event in self.events.values():
                 if name in event:
                     event.pop(name)
