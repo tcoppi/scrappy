@@ -4,9 +4,9 @@
 [submodule "peewee"]
 	path = peewee
 	url = https://github.com/coleifer/peewee.git
-[submodule "modules/auth/requests-oauthlib"]
-	path = modules/auth/requests-oauthlib
-	url = https://github.com/requests/requests-oauthlib.git
-[submodule "modules/auth/oauthlib"]
-	path = modules/auth/oauthlib
+[submodule "modules/utility/user/auth/oauthlib"]
+	path = modules/utility/user/auth/oauthlib
 	url = https://github.com/idan/oauthlib.git
+[submodule "modules/utility/user/auth/requests-oauthlib"]
+	path = modules/utility/user/auth/requests-oauthlib
+	url = https://github.com/requests/requests-oauthlib.git
