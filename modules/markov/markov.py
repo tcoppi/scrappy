@@ -6,13 +6,25 @@
 
 import random
 import os.path
-import pickle
+import cPickle as pickle
 import re
 import threading
 import time
 import logging
 
+import peewee
+
 from module import Module
+
+logging.getLogger('peewee').setLevel("WARNING")
+class Chain(peewee.Model):
+    w1 = peewee.TextField()
+    w2 = peewee.TextField()
+    next = peewee.BlobField()
+
+    class Meta:
+        database = peewee.SqliteDatabase('db/%s.db' % __name__, threadlocals=True)
+#        database = peewee.MySQLDatabase('scrappy', user='scrappy', passwd='scrappy')
 
 class markov(Module):
     def __init__(self,scrap):
@@ -43,17 +55,12 @@ class markov(Module):
 
         self.nickmatch = re.compile(scrap.servers.itervalues().next()['nickname'])
 
-        self.setup_table()
+
+
+        if not Chain.table_exists():
+            Chain.create_table()
 
         random.seed()
-
-    def setup_table(self):
-        db_conn = self.get_db()
-        sql = "CREATE TABLE IF NOT EXISTS chains (w1 BLOB, w2 BLOB, next BLOB)"
-        db_cursor = db_conn.cursor()
-        db_cursor.execute(sql)
-        db_conn.commit()
-        db_conn.close()
 
     def markov_stats(self, server, event, bot):
         c = server["connection"]
@@ -149,26 +156,20 @@ class markov(Module):
             counter += 1
             if counter%100000 == 0:
                 self.logger.debug("Iteration %d, dumping" % counter)
-                db_conn = self.get_db()
-                db_curs = db_conn.cursor()
                 for (k, v) in chains.items():
                     (w1, w2) = k
-                    self.add_next(w1, w2, v, db_curs)
+                    self.add_next(w1, w2, v)
                 chains = {}
-                db_conn.commit()
-                db_conn.close()
 
         self.logger.debug("Iteration %d, dumping" % counter)
-        db_conn = self.get_db()
-        db_curs = db_conn.cursor()
+        counter = 0
         for (k, v) in chains.items():
             (w1, w2) = k
-            self.add_next(w1, w2, v, db_curs)
+            self.add_next(w1, w2, v)
+            counter += 1
+            if counter % 500 == 0:
+                c.privmsg(event.target, str(counter))
         chains = {}
-        db_conn.commit()
-        db_conn.close()
-
-
 
         c.privmsg(event.target, "Done!")
         mf.close()
@@ -221,61 +222,30 @@ class markov(Module):
             self.last_talked = time.time()
             c.privmsg(event.target, "%s" %
                     (" ".join(self.emit_chain(random.choice(event.tokens)))))
-
         self.learn_sentence(event.tokens)
 
-    def add_next(self, w1, w2, next_add, cursor=None):
-        if cursor is None:
-            db_conn = self.get_db()
-            db_curs = db_conn.cursor()
-        else:
-            db_curs = cursor
-        sql = "SELECT next from chains WHERE w1=? and w2=?"
+    def add_next(self, w1, w2, next_add):
         try:
-            db_curs.execute(sql, (w1, w2))
-        except Exception, e:
-            self.logger.warning(e)
-            return
-        next_pickle = db_curs.fetchone()
-        if next_pickle is not None:
-            exists = True
-            next_list = pickle.loads(next_pickle[0])
-        else:
-            exists = False
+            next_pickle = Chain.get(Chain.w1==w1, Chain.w2==w2)
+            next_list = pickle.loads(bytes(next_pickle.next))
+        except Chain.DoesNotExist:
             next_list = []
+            Chain(w1=w1, w2=w2, next="").save()
         next_list += next_add
         next_pickle = pickle.dumps(next_list)
-        if exists:
-            sql = "UPDATE chains SET next=? WHERE w1=? and w2=?"
-            db_curs.execute(sql, (next_pickle,w1,w2))
-        else:
-            sql = "INSERT INTO chains (w1, w2, next) VALUES (?, ?, ?)"
-            db_curs.execute(sql, (w1,w2,next_pickle))
 
-        if cursor is None:
-            db_conn.commit()
-            db_conn.close()
+        q = Chain.update(next=next_pickle).where(Chain.w1==w1, Chain.w2==w2)
+        q.execute()
 
-    def get_next(self, w1, w2, cursor=None):
-        if cursor is None:
-            db_conn = self.get_db()
-            db_curs = db_conn.cursor()
-        else:
-            db_curs = cursor
-        sql = "SELECT next from chains WHERE w1=? and w2=?"
-        db_curs.execute(sql, (w1, w2))
-        next_pickle = db_curs.fetchone()
-
-        if cursor is None:
-            db_conn.close()
-
-        if next_pickle is not None:
-            next_list = pickle.loads(next_pickle[0])
+    def get_next(self, w1, w2):
+        try:
+            next_pickle = Chain.get(Chain.w1==w1, Chain.w2==w2)
+            next_list = pickle.loads(bytes(next_pickle.next))
             return unicode(random.choice(next_list))
-        else:
+        except Chain.DoesNotExist:
             return None
 
-    def learn_sentence(self, tokens, cursor=None):
+    def learn_sentence(self, tokens):
         """Feed me a tokenized sentence"""
         #self.logger.info("in learn")
         with self.lock:
@@ -296,8 +266,8 @@ class markov(Module):
             #Then, set w1 to w2 and w2 to i, so the chain moves forward.
             for i in words:
                 #self.statetab.setdefault((w1, w2), []).append(i)
-                self.add_next(w1, w2, [i], cursor)
-                w1, w2 = w2, unicode(i.lower(),'utf8')
+                self.add_next(w1, w2, [i])
+                w1, w2 = w2, (u"%s" % i.lower())
 
             self.add_next(w1, w2, [u"\n"])
             #self.statetab.setdefault((w1, w2), []).append("\n")
@@ -317,15 +287,12 @@ class markov(Module):
 
         w2 = key.lower()
 
-        db_conn = self.get_db()
-        db_curs = db_conn.cursor()
         for i in range(1, random.randint(5,50)):
-            next_word = self.get_next(w1, w2, db_curs)
+            next_word = self.get_next(w1, w2)
             if next_word is not None:
                 retval.append(next_word)
                 w1, w2 = w2, next_word
             i = i + 1
-        db_conn.close()
 
         return retval
 

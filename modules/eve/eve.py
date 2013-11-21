@@ -8,8 +8,21 @@ from module import Module
 
 from eve_cache import EveCache
 
+import peewee
+
+class EVEAcct(peewee.Model):
+    server = peewee.TextField()
+    irc_name = peewee.TextField()
+    eve_id = peewee.TextField()
+    eve_vcode = peewee.TextField()
+
+    class Meta:
+        database = peewee.SqliteDatabase('db/%s.db' % __name__.split('.')[0], threadlocals=True)
+
+
 
 class eve(Module):
+    models = [EVEAcct]
     def __init__(self, scrap):
         super(eve, self).__init__(scrap)
 
@@ -18,15 +31,6 @@ class eve(Module):
         self.register_cmd("eve-wallet", self.wallet)
         self.register_cmd("eve-skill", self.skill)
         self.register_cmd("eve-add", self.eve_add)
-
-    def setup_table(self, server):
-        db_conn = self.get_db()
-        # TODO: Could probably hash this, if there is no need to go from table->server/target again
-        sql = "CREATE TABLE IF NOT EXISTS %s (name TEXT, id TEXT, key TEXT)" % server
-        db_cursor = db_conn.cursor()
-        db_cursor.execute(sql)
-        db_conn.commit()
-        db_conn.close()
 
     def skill(self, server, event, bot):
         c = server["connection"]
@@ -82,40 +86,25 @@ class eve(Module):
         """ Add account to eve using <ID> <VCODE> """
         c = server["connection"]
 
-        if len(event.tokens) < 3:
+        if len(event.arg) < 2:
             c.privmsg(event.target, "Not enough arguments, <ID> and <VCODE> required.")
             return
 
         eve_id = event.tokens[1]
         eve_vcode = event.tokens[2]
 
-        self.setup_table(server["servername"])
-        db_conn = self.get_db()
-        db_curs = db_conn.cursor()
+        updated = EVEAcct.update(eve_id = eve_id, eve_vcode = eve_vcode).where(EVEAcct.server == server["servername"], EVEAcct.irc_name == event.source.nick)
+        print updated.execute()
+        if updated.execute() == 0:
+            EVEAcct(server=server["servername"], irc_name=event.source.nick, eve_id=eve_id, eve_vcode=eve_vcode).save()
 
-        sql = "SELECT 1 FROM %s WHERE name=?" % server["servername"]
-        db_curs.execute(sql, (event.source.nick,))
-        if db_curs.fetchone() is None:
-            sql = "INSERT INTO %s (name, id, key) VALUES (?, ?, ?)" % server["servername"]
-            db_curs.execute(sql,(event.source.nick, eve_id, eve_vcode))
-            c.privmsg(event.target, "Added %s to the database with ID %s" % (event.source.nick, eve_id))
-        else:
-            sql = "UPDATE %s SET id=?,key=? WHERE name=?" % server["servername"]
-            db_curs.execute(sql, (eve_id, eve_vcode, event.source.nick))
-            c.privmsg(event.target, "Updated %s in the database to ID %s" % (event.source.nick, eve_id))
-
-        db_conn.commit()
-        db_conn.close()
+        c.privmsg(event.target, "Account added!")
 
     def get_credentials(self, server, nick):
-        self.setup_table(server)
-        db_conn = self.get_db()
-        db_curs = db_conn.cursor()
-        sql = "SELECT id, key FROM %s WHERE name=? " % server
-        db_curs.execute(sql, (nick,))
-
-        credentials = db_curs.fetchone()
-        db_conn.close()
-        return credentials
+        try:
+            acct = EVEAcct.get(EVEAcct.server == server, EVEAcct.irc_name == nick)
+            return (acct.eve_id, acct.eve_vcode)
+        except EVEAcct.DoesNotExist:
+            return None
 
 

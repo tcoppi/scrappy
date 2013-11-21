@@ -1,3 +1,6 @@
 [submodule "modules/eve/eveapi"]
 	path = modules/eve/eveapi
 	url = https://github.com/ntt/eveapi.git
+[submodule "peewee"]
+	path = peewee
+	url = https://github.com/coleifer/peewee.git
