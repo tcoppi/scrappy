@@ -1,6 +1,5 @@
 import logging
 import os, os.path
-import sqlite3
 import time
 
 class ModuleException(Exception):
