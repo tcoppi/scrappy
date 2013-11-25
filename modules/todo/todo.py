@@ -1,17 +1,14 @@
 # Todo module
 # Keeps track of todos and prioritizes them with a simple +/- system
-from module import Module
+from module import Module, DBModel
 
 import peewee
 
-class Todo(peewee.Model):
+class Todo(DBModel):
     channel = peewee.TextField()
     server = peewee.TextField()
     todo = peewee.TextField()
     done = peewee.BooleanField(default=False)
-
-    class Meta:
-        database = peewee.SqliteDatabase('db/%s.db' % __name__.split('.')[0], threadlocals=True)
 
 class todo(Module):
     models = [Todo]

@@ -14,17 +14,13 @@ import logging
 
 import peewee
 
-from module import Module
+from module import Module, DBModel
 
 logging.getLogger('peewee').setLevel("WARNING")
-class Chain(peewee.Model):
+class Chain(DBModel):
     w1 = peewee.TextField()
     w2 = peewee.TextField()
     next = peewee.BlobField()
-
-    class Meta:
-        database = peewee.SqliteDatabase('db/%s.db' % __name__, threadlocals=True)
-#        database = peewee.MySQLDatabase('scrappy', user='scrappy', passwd='scrappy')
 
 class markov(Module):
     def __init__(self,scrap):

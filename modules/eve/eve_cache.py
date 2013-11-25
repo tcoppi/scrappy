@@ -4,17 +4,15 @@ import threading
 import time
 
 import peewee
+from module import DBModel
 
 
-class Cache(peewee.Model):
+class Cache(DBModel):
     host = peewee.TextField()
     path = peewee.TextField()
     params = peewee.TextField()
     expires = peewee.IntegerField()
     xml = peewee.TextField()
-
-    class Meta:
-        database = peewee.SqliteDatabase('db/%s.db' % __name__.split('.')[0], threadlocals=True)
 
 class EveCache(object):
     db_lock = threading.Lock()

@@ -2,6 +2,13 @@ import logging
 import os, os.path
 import time
 
+import peewee
+
+class DBModel(peewee.Model):
+    #TODO: hardcoded, tut
+    class Meta:
+        database = peewee.SqliteDatabase('scrappy.db', threadlocals=True)
+
 class ModuleException(Exception):
     pass
 
@@ -12,14 +19,6 @@ class Module(object):
     def __init__(self, scrap):
         self.command_callbacks = {}
         self.logger = logging.getLogger("scrappy.%s" % self.__class__.__name__)
-
-        if os.path.exists("db") and not os.path.isdir("db"):
-            self.logger.critical("Databases directory 'db' is not a directory!")
-            raise ModuleException("Databases directory 'db' is not a directory.")
-
-        if not os.path.exists("db"):
-            self.logger.debug("Creating database directory.")
-            os.mkdir("db")
 
         for model in self.models:
             if not model.table_exists():

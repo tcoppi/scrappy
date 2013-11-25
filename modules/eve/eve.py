@@ -4,22 +4,17 @@ import time
 
 import eveapi.eveapi as eveapi
 
-from module import Module
+from module import Module, DBModel
 
 from eve_cache import EveCache
 
 import peewee
 
-class EVEAcct(peewee.Model):
+class EVEAcct(DBModel):
     server = peewee.TextField()
     irc_name = peewee.TextField()
     eve_id = peewee.TextField()
     eve_vcode = peewee.TextField()
-
-    class Meta:
-        database = peewee.SqliteDatabase('db/%s.db' % __name__.split('.')[0], threadlocals=True)
-
-
 
 class eve(Module):
     models = [EVEAcct]

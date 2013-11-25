@@ -1,17 +1,13 @@
 import socket
 import cPickle
 
-from module import Module
+from module import Module, DBModel
 
 import peewee
 
-class Factoid(peewee.Model):
+class Factoid(DBModel):
     phrase = peewee.TextField()
     factoid = peewee.TextField()
-
-    class Meta:
-        # TODO: Figure out a better way to get the module name, ideally something that can be pushed back into module.py
-        database = peewee.SqliteDatabase('db/%s.db' % __name__.split('.')[0], threadlocals=True)
 
 class fact(Module):
     models = [Factoid]
