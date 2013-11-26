@@ -1,13 +1,7 @@
 import logging
 import os, os.path
 import time
-
-import peewee
-
-class DBModel(peewee.Model):
-    #TODO: hardcoded, tut
-    class Meta:
-        database = peewee.SqliteDatabase('scrappy.db', threadlocals=True)
+from dbmodel import DBModel
 
 class ModuleException(Exception):
     pass
