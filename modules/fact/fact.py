@@ -1,6 +1,3 @@
-import socket
-import cPickle
-
 from module import Module, DBModel
 
 import peewee
