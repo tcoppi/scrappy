@@ -1,3 +1,4 @@
+import os
 import os.path
 import subprocess
 
@@ -8,6 +9,7 @@ class git(Module):
         super(git, self).__init__(scrap)
         scrap.register_event("git", "msg", self.distribute)
         self.register_cmd("version", self.git_version)
+        self.register_cmd("update", self.update)
 
     def git_version(self, server, event, bot):
         c = server["connection"]
@@ -17,4 +19,17 @@ class git(Module):
         else:
             ver = subprocess.check_output(["git", "describe", "--always"])
             c.privmsg(event.target, "Scrappy git version: %s" % ver.strip())
+
+    def update(self, server, event, bot):
+        c = server["connection"]
+
+        if not os.path.exists(".git"):
+            c.privmsg(event.target, "Scrappy not running from a git repo")
+        else:
+            self.git_version(server, event, bot)
+            os.system("git pull")
+            c.privmsg(event.target, "Scrappy updated! You may need to %sreboot." % server["cmdchar"])
+            self.git_version(server, event, bot)
+
+
 
