@@ -26,10 +26,12 @@ class git(Module):
         if not os.path.exists(".git"):
             c.privmsg(event.target, "Scrappy not running from a git repo")
         else:
-            self.git_version(server, event, bot)
-            os.system("git pull")
-            c.privmsg(event.target, "Scrappy updated! You may need to %sreboot." % server["cmdchar"])
-            self.git_version(server, event, bot)
+            output = subprocess.check_output(["git", "pull"])
+            if "up-to-date" in output:
+                c.privmsg(event.target, "Scrappy is already the latest version")
+            else:
+                c.privmsg(event.target, "Scrappy updated! You may need to %sreboot." % server["cmdchar"])
+                self.git_version(server, event, bot)
 
 
 
