@@ -1,4 +1,4 @@
-from module import Module, DBModel
+from module import Module
 
 class skeleton(Module):
 
