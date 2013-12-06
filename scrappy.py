@@ -46,7 +46,10 @@ class User(object):
     def host(self):
         if self._host is None:
             self.server.whois((self.nick,))
-            while self._host is None:
+            timeout = 1
+            time_spent = 0
+            while self._host is None and time_spent < timeout:
+                time_spent += .01
                 time.sleep(.01)
         return self._host
 
@@ -57,15 +60,13 @@ class User(object):
     def join(self, channel):
         channel.usercount += 1
         self.channels[channel.name] = channel
-        print "%r: %r" % (self, self.channels)
 
     def part(self, channel):
         channel.usercount -= 1
         del self.channels[channel.name]
-        print "%r: %r" % (self, self.channels)
 
     def __str__(self):
-        return "%s@%s" % (self.nick, self.host)
+        return "%s@%s" % (self.nick, self._host)
 
     def __repr__(self):
         return self.__str__()
@@ -91,13 +92,13 @@ class ServerState(ircclient.ServerConnection):
         # One second tick for timed functions
         self.execute_every(1, bot.on_tick, arguments=(self,))
 
-        self.add_global_handler("welcome", self.join_defaults)
-        self.add_global_handler("join", self.update_channel)
-        self.add_global_handler("part", self.update_channel)
-        self.add_global_handler("kick", self.update_channel)
-        self.add_global_handler("quit", self.update_channel)
-        self.add_global_handler("namreply", self.on_namereply)
-        self.add_global_handler("whoisuser", self.on_whoisreply)
+        bot.register_event("server-%s"%name,"welcome", self.join_defaults)
+        bot.register_event("server-%s"%name,"join", self.update_channel)
+        bot.register_event("server-%s"%name,"part", self.update_channel)
+        bot.register_event("server-%s"%name,"kick", self.update_channel)
+        bot.register_event("server-%s"%name,"quit", self.update_channel)
+        bot.register_event("server-%s"%name,"namreply", self.on_namereply)
+        bot.register_event("server-%s"%name,"whoisuser", self.on_whoisreply)
 
         if "password" in config:
             password = config["password"]
@@ -128,12 +129,12 @@ class ServerState(ircclient.ServerConnection):
 
         #self.channels = [Channel(x) for x in config["channels"].split()]
 
-    def join_defaults(self, server, event):
+    def join_defaults(self, server, event, bot):
         if server == self:
             for channel in self.initial_channels:
                 self.join(channel)
 
-    def update_channel(self, server, event):
+    def update_channel(self, server, event, bot):
         if server == self:
             if event.type == "kick":
                 nick = event.arguments[0]
@@ -168,7 +169,7 @@ class ServerState(ircclient.ServerConnection):
                 if channel.user_count == 0:
                     del self.channels[channel.name]
 
-    def on_namereply(self, server, event):
+    def on_namereply(self, server, event, bot):
         if server == self:
             # Hoping that the namreply is only additive! In theory, we shouldn't have missed any users leaving channels though
             if event.type == "namreply":
@@ -181,10 +182,9 @@ class ServerState(ircclient.ServerConnection):
                 for nick in event.arguments[2].strip().split(" "):
                     if nick not in self.users:
                         self.users[nick] = User(self, nick)
-                        self.logger.debug("Checking host: " % self.users[nick].host)
                     self.users[nick].join(channel)
 
-    def on_whoisreply(self, server, event):
+    def on_whoisreply(self, server, event, bot):
         if server == self:
             if event.type == "whoisuser":
                 nick = event.arguments[0]
