@@ -16,24 +16,22 @@ class wallet(Module):
         self.register_cmd("transfer", self.transfer)
 
     def transfer(self, server, event, bot):
-        c = server["connection"]
-        acct = get_account(event.source, server["servername"])
+        acct = get_account(event.source, server.server_name)
         try:
             user_wallet = Wallet.get(Wallet.acct == acct)
         except Wallet.DoesNotExist:
             user_wallet = Wallet(acct = acct)
             user_wallet.save()
 
-        c.privmsg(event.target, "Error! Not yet implemented because scrappy doesn't know who's who, except for who's talking!")
+        server.privmsg(event.target, "Error! Not yet implemented because scrappy doesn't know who's who, except for who's talking!")
 
 
     def wallet_amt(self, server, event, bot):
-        c = server["connection"]
-        acct = get_account(event.source, server["servername"])
+        acct = get_account(event.source, server.server_name)
         try:
             user_wallet = Wallet.get(Wallet.acct == acct)
         except Wallet.DoesNotExist:
             user_wallet = Wallet(acct = acct)
             user_wallet.save()
 
-        c.privmsg(event.target, "Your wallet balance is %.6f" % user_wallet.balance)
+        server.privmsg(event.target, "Your wallet balance is %.6f" % user_wallet.balance)
