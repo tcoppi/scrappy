@@ -59,29 +59,26 @@ class markov(Module):
         random.seed()
 
     def markov_stats(self, server, event, bot):
-        c = server["connection"]
 
-        c.privmsg(event.target, "chains: %d" % len(self.statetab.items()))
+        server.privmsg(event.target, "chains: %d" % len(self.statetab.items()))
 
     def markov_delay(self, server, event, bot):
-        c = server["connection"]
         if len(event.tokens) < 3:
-            c.privmsg(event.target, "Need a mean AND stdev as arguments.")
+            server.privmsg(event.target, "Need a mean AND stdev as arguments.")
 
         try:
             self.delay_mean = float(event.tokens[1])
             self.delay_stdev = float(event.tokens[2])
-            c.privmsg(event.target, "Delay is now N(%.2f,%.2f)" % (self.delay_mean, self.delay_stdev))
+            server.privmsg(event.target, "Delay is now N(%.2f,%.2f)" % (self.delay_mean, self.delay_stdev))
         except:
-            c.privmsg(event.target, "I didn't like the format those were in, try again.")
+            server.privmsg(event.target, "I didn't like the format those were in, try again.")
 
 
     #loads in a previously pickled saved state
     def markov_load(self, server, event, bot):
-        c = server["connection"]
 
         if len(event.tokens) < 2:
-            c.privmsg(event.target, "Not enough arguments fo load.")
+            server.privmsg(event.target, "Not enough arguments fo load.")
             return
 
         fp = event.tokens[1]
@@ -90,16 +87,15 @@ class markov(Module):
             try:
                 pkfile = open(fp, "r")
                 self.statetab = pickle.load(pkfile)
-                c.privmsg(event.target, "Loaded %s." % fp)
+                server.privmsg(event.target, "Loaded %s." % fp)
             except IOError:
-                c.privmsg(event.target, "Could not load '%s': Doesn't exist" % fp)
+                server.privmsg(event.target, "Could not load '%s': Doesn't exist" % fp)
 
     #pickles out the state to a file
     def markov_dump(self, server, event, bot):
-        c = server["connection"]
 
         if len(event.tokens) < 2:
-            c.privmsg(event.target, "Not enough arguments fo dump.")
+            server.privmsg(event.target, "Not enough arguments fo dump.")
             return
 
         fp = event.tokens[1]
@@ -108,29 +104,28 @@ class markov(Module):
 
             pkfile = open(fp, "w+")
             pickle.dump(self.statetab, pkfile)
-            c.privmsg(event.target, "Done taking a dump.")
+            server.privmsg(event.target, "Done taking a dump.")
 
 
     def markov_file(self, server, event, bot):
         """Load a plaintext file."""
-        c = server["connection"]
 
         if len(event.tokens) < 2:
-            c.privmsg(event.target, "Not enough arguments fo file.")
+            server.privmsg(event.target, "Not enough arguments fo file.")
 
         mfname = event.tokens[1]
 
         try:
             valid_files = os.listdir('markov_input')
             if mfname not in valid_files:
-                c.privmsg(event.target, "File %s doesn't exist." % mfname)
+                server.privmsg(event.target, "File %s doesn't exist." % mfname)
             size = os.path.getsize('markov_input/'+mfname)
             mf = open('markov_input/'+mfname, 'r')
         except IOError:
-            c.privmsg(event.target, "Error loading file %s." % mfname)
+            server.privmsg(event.target, "Error loading file %s." % mfname)
             return
 
-        c.privmsg(event.target, "%s successfully opened. Reading %d bytes..." % (mfname, size))
+        server.privmsg(event.target, "%s successfully opened. Reading %d bytes..." % (mfname, size))
         start = time.time()
         counter = 0
         chains = {}
@@ -138,7 +133,7 @@ class markov(Module):
             cur_time = time.time()
             if cur_time-start > 10:
                 start = cur_time
-                c.privmsg(event.target, "Still loading, %d bytes left to go" % size)
+                server.privmsg(event.target, "Still loading, %d bytes left to go" % size)
 
             size -= len(line)
 
@@ -164,10 +159,10 @@ class markov(Module):
             self.add_next(w1, w2, v)
             counter += 1
             if counter % 500 == 0:
-                c.privmsg(event.target, str(counter))
+                server.privmsg(event.target, str(counter))
         chains = {}
 
-        c.privmsg(event.target, "Done!")
+        server.privmsg(event.target, "Done!")
         mf.close()
 
     def markov_learn(self, server, event, bot):
@@ -183,13 +178,12 @@ class markov(Module):
         event.command = event.tokens[0][1:]
         cmdchar = event.tokens[0][0]
 
-        if cmdchar == server["cmdchar"]:
+        if cmdchar == server.cmdchar:
             return
 
 #        if event.cmd == "talk" or event.cmd == "markov_stats" or event.cmd == "mkload" or event.cmd == "mkdump" or event.cmd == "markov_file":
 #            return
 
-        c = server["connection"]
 
         delay = random.gauss(self.delay_mean, self.delay_stdev)
         self.logger.debug("Reply delay N(%f,%f) is %f" % (self.delay_mean, self.delay_stdev, delay))
@@ -207,7 +201,7 @@ class markov(Module):
                 delta = now-start
                 if delta < delay:
                     time.sleep(delay-delta)
-                c.privmsg(event.target, "%s: %s" % (event.source.nick, " ".join(tmp)))
+                server.privmsg(event.target, "%s: %s" % (event.source.nick, " ".join(tmp)))
 
         #randomly reply
         if random.randint(0, 7) == 0 and bot.talk == 1:
@@ -216,7 +210,7 @@ class markov(Module):
             if delta < delay:
                 time.sleep(delay-delta)
             self.last_talked = time.time()
-            c.privmsg(event.target, "%s" %
+            server.privmsg(event.target, "%s" %
                     (" ".join(self.emit_chain(random.choice(event.tokens)))))
         self.learn_sentence(event.tokens)
 
@@ -295,13 +289,12 @@ class markov(Module):
     def markov_talk(self, server, event, bot):
         """ Makes the markov chain talk to you """
         self.logger.info("in talk")
-        c = server["connection"]
 
         if len(event.tokens) < 2:
             try:
                 key = random.choice(self.statetab[("\n","\n")])
             except KeyError:
-                c.privmsg(event.target, "Don't wanna talk!")
+                server.privmsg(event.target, "Don't wanna talk!")
                 return
         else:
             key = event.tokens[1]
@@ -313,12 +306,11 @@ class markov(Module):
             counter += 1
 
         if tmp:
-            c.privmsg(event.target, ("%s %s" % (key, " ".join(tmp))).lstrip())
+            server.privmsg(event.target, ("%s %s" % (key, " ".join(tmp))).lstrip())
 
 
 
 #def tweet(server, args, bot):
-#    c = server["connection"]
 #    cmd = args[4].split(" ")[0]
 
 #    if cmd == "tweet":
@@ -332,4 +324,4 @@ class markov(Module):
 #                          "21156817-VFyeze14zS3K9PrLQiXkgmvBOxorbNrAJyNwW09IQ",
 #                          'nK7Gr7JRyUl7E4cM4EyBUq6bIEG8g0VuzimurtOyI')
 #        api.PostUpdate(last)
-#        c.privmsg(args[5], "Updated Twitter with message: %s" % last)
+#        server.privmsg(args[5], "Updated Twitter with message: %s" % last)
