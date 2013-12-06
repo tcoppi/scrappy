@@ -29,8 +29,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 irc_logger = logging.getLogger("irclib.client")
 # Change me if you want to see IRC DEBUG lines
-#irc_logger.setLevel(logging.INFO)
-irc_logger.setLevel(logging.DEBUG)
+irc_logger.setLevel(logging.INFO)
+#irc_logger.setLevel(logging.DEBUG)
 
 # State classes
 
