@@ -22,13 +22,13 @@ class Auth(object):
         print repr(user)
         print repr(host)
         try:
-            user_obj = User.get(User.user == user, User.host == host, User.server == server["servername"])
+            user_obj = User.get(User.user == user, User.host == host, User.server == server.server_name)
         except User.DoesNotExist:
-            user_obj = User(user=user, host=host, server=server["servername"])
+            user_obj = User(user=user, host=host, server=server.server_name)
 
         user_obj.save()
 
-        oauth = requests_oauthlib.OAuth2Session(server["google_id"], redirect_uri=self.redirect_uri, scope=self.scope)
+        oauth = requests_oauthlib.OAuth2Session(server.config["google_id"], redirect_uri=self.redirect_uri, scope=self.scope)
         authorization_url, state = oauth.authorization_url('https://accounts.google.com/o/oauth2/auth', access_type="offline", approval_prompt="auto")
 
         return authorization_url
@@ -39,13 +39,13 @@ class Auth(object):
         user = nickmask.user
         host = nickmask.host
         try:
-            user_obj = User.get(User.user == user, User.host == host, User.server == server["servername"])
+            user_obj = User.get(User.user == user, User.host == host, User.server == server.server_name)
         except User.DoesNotExist:
             return (False, "User has not received a challenge yet")
 
-        oauth = requests_oauthlib.OAuth2Session(server["google_id"], redirect_uri=self.redirect_uri, scope=self.scope)
+        oauth = requests_oauthlib.OAuth2Session(server.config["google_id"], redirect_uri=self.redirect_uri, scope=self.scope)
         try:
-            token = oauth.fetch_token('https://accounts.google.com/o/oauth2/token', code=auth_response, client_secret=server["google_secret"])
+            token = oauth.fetch_token('https://accounts.google.com/o/oauth2/token', code=auth_response, client_secret=server.config["google_secret"])
             r = oauth.get('https://www.googleapis.com/oauth2/v1/userinfo')
             info = json.loads(r.content)
             if user_obj.acct is not None:

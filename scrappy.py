@@ -85,7 +85,7 @@ class ServerState(ircclient.ServerConnection):
         irclibobj.add_connection(self)
 
         self.logger = bot.logger.getChild(name)
-        config["servername"] = name
+        self.server_name = name
 
         # Register handlers
         self.add_global_handler("all_events", bot.process_event)
