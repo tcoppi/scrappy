@@ -11,10 +11,9 @@ class reverse(Module):
 
     def reverse(self, server, event, bot):
         """Takes a string and reverses it.  Simple."""
-        c = server["connection"]
 
         if len(event.tokens) < 2:
-            c.privmsg(event.target, "Not enough arguments")
+            server.privmsg(event.target, "Not enough arguments")
             return
 
         if len(event.arg) > 0:
@@ -25,4 +24,4 @@ class reverse(Module):
         else:
             strng = "?tahw esreveR"
 
-        c.privmsg(event.target, strng)
+        server.privmsg(event.target, strng)
