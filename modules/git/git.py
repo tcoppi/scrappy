@@ -12,13 +12,11 @@ class git(Module):
         self.register_cmd("update", self.update)
 
     def git_version(self, server, event, bot):
-        c = server["connection"]
-
         if not os.path.exists(".git"):
-            c.privmsg(event.target, "Scrappy not running from a git repo")
+            server.privmsg(event.target, "Scrappy not running from a git repo")
         else:
             ver = subprocess.check_output(["git", "describe", "--always"])
-            c.privmsg(event.target, "Scrappy git version: %s" % ver.strip())
+            server.privmsg(event.target, "Scrappy git version: %s" % ver.strip())
 
     def update(self, server, event, bot):
         c = server["connection"]
