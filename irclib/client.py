@@ -182,6 +182,11 @@ class IRC(object):
 
         self.add_global_handler("ping", _ping_ponger, -42)
 
+    def add_connection(self, connection):
+        """Adds an existing connection."""
+        with self.mutex:
+            self.connections.append(connection)
+
     def server(self):
         """Creates and returns a ServerConnection object."""
 
