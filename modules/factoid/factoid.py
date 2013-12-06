@@ -11,14 +11,13 @@ class factoid(Module):
 #        self.register_cmd("url", self.url)
 
     def factoid(self, server, event, bot):
-        c = server["connection"]
         event.tokens = event.arguments[0].split(" ")
 
         if not event.tokens or not event.tokens[0]:
             return
 
         cmdchar = event.tokens[0][0]
-        if cmdchar != server["factoidchar"]:
+        if cmdchar != server.config["factoidchar"]:
             return
 
         event.factoid = event.tokens[0][1:]
@@ -29,7 +28,7 @@ class factoid(Module):
 
         rf = self.lookup_factoid(event.factoid)
         pf = self.parse_factoid(rf)
-        c.privmsg(event.target, pf)
+        server.privmsg(event.target, pf)
 
     def change_factoid(self, factoid, new_value):
         pass
