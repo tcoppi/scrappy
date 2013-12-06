@@ -12,7 +12,6 @@ class dns(Module):
         self.register_cmd("dns", self.dns)
 
     def dns(self, server, event, bot):
-        c = server["connection"]
 
         if len(event.tokens) == 1:
             msg = "Nothing to look up, zoob!"
@@ -29,4 +28,4 @@ class dns(Module):
                     msg = "%s -> %s" % (addr, socket.gethostbyname(addr))
                 except socket.gaierror:
                     msg = "No result for '%s'" % addr
-            c.privmsg(event.target, msg)
+            server.privmsg(event.target, msg)
