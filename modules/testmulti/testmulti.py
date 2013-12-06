@@ -15,25 +15,20 @@ class testmulti(Module):
         self.register_cmd("testmulti", self.sosleepy)
 
     def testmulti(self, server, event, bot):
-        c = server["connection"]
-        c.privmsg(event.source, "Sleeping for 5 seconds, yaaawn.")
+        server.privmsg(event.source, "Sleeping for 5 seconds, yaaawn.")
 
     def haicoppi(self, server, event, bot):
-        c = server["connection"]
-        c.privmsg("tcoppi", "Ohai")
+        server.privmsg("tcoppi", "Ohai")
 
     def haiomega(self, server, event, bot):
-        c = server["connection"]
-        c.privmsg("[mharrison]", "Ohai")
+        server.privmsg("[mharrison]", "Ohai")
 
     def hailandon(self, server, event, bot):
-        c = server["connection"]
-        c.privmsg("Landon", "Ohai")
+        server.privmsg("Landon", "Ohai")
 
     def sosleepy(self, server, event, bot):
-        c = server["connection"]
         sleep(5)
-        c.privmsg(event.target, "Yawn, I'm awake now!")
+        server.privmsg(event.target, "Yawn, I'm awake now!")
 
     def wtf(self):
         print "wtf!"
