@@ -52,7 +52,6 @@ class github(Module):
         self.register_cmd("gh-issues", self.get_issues)
 
     def get_issues(self, server, event, bot):
-        c = server["connection"]
         repo = event.arg[0]
 
 
@@ -62,13 +61,13 @@ class github(Module):
         try:
             response = urllib2.urlopen(url)
         except urllib2.URLError as e:
-            c.privmsg(event.target, "Problems accessing the Github API, try again later"+str(e))
+            server.privmsg(event.target, "Problems accessing the Github API, try again later"+str(e))
             return
         #check response.info for important information like rate limits
         response = response.read()
         response = json.loads( response )
         if len(response) == 0:
-            c.privmsg(event.target, "No open issues for %s" % repo)
+            server.privmsg(event.target, "No open issues for %s" % repo)
         else:
             # Get labels
             label_colors = {} # key name, value color (IRC color, not hex)
@@ -91,5 +90,5 @@ class github(Module):
                 else:
                     assigned_to = None
 
-                c.privmsg(event.target, "Issue %d %s - opened by %s, assigned to %s - %s" % (num, label_str, user, assigned_to, title))
+                server.privmsg(event.target, "Issue %d %s - opened by %s, assigned to %s - %s" % (num, label_str, user, assigned_to, title))
 
