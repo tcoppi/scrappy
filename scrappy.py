@@ -12,6 +12,7 @@ import os, os.path
 import ssl
 import sys
 import thread, threading
+import time
 
 from irclib import client as ircclient
 
@@ -28,7 +29,171 @@ logging.basicConfig(level=logging.DEBUG)
 
 irc_logger = logging.getLogger("irclib.client")
 # Change me if you want to see IRC DEBUG lines
-irc_logger.setLevel(logging.INFO)
+#irc_logger.setLevel(logging.INFO)
+irc_logger.setLevel(logging.DEBUG)
+
+# State classes
+
+class User(object):
+    def __init__(self, server, nick, host=None):
+        self.server = server
+        self.nick = nick
+        self._host = host
+
+        self.channels = {}
+
+    @property
+    def host(self):
+        if self._host is None:
+            self.server.whois((self.nick,))
+            while self._host is None:
+                time.sleep(.01)
+        return self._host
+
+    @host.setter
+    def host(self, value):
+        self._host = value
+
+    def join(self, channel):
+        channel.usercount += 1
+        self.channels[channel.name] = channel
+        print "%r: %r" % (self, self.channels)
+
+    def part(self, channel):
+        channel.usercount -= 1
+        del self.channels[channel.name]
+        print "%r: %r" % (self, self.channels)
+
+    def __str__(self):
+        return "%s@%s" % (self.nick, self.host)
+
+    def __repr__(self):
+        return self.__str__()
+
+#TODO: use weakref dictionaries for the users
+class Channel(object):
+    def __init__(self, server, channel_name):
+        self.logger = server.logger.getChild(channel_name)
+        self.server = server
+        self.name = channel_name
+        self.usercount = 0
+
+class ServerState(ircclient.ServerConnection):
+    def __init__(self, name, config, bot, irclibobj):
+        super(ServerState, self).__init__(irclibobj)
+        irclibobj.add_connection(self)
+
+        self.logger = bot.logger.getChild(name)
+        config["servername"] = name
+
+        # Register handlers
+        self.add_global_handler("all_events", bot.process_event)
+        # One second tick for timed functions
+        self.execute_every(1, bot.on_tick, arguments=(self,))
+
+        self.add_global_handler("welcome", self.join_defaults)
+        self.add_global_handler("join", self.update_channel)
+        self.add_global_handler("part", self.update_channel)
+        self.add_global_handler("kick", self.update_channel)
+        self.add_global_handler("quit", self.update_channel)
+        self.add_global_handler("namreply", self.on_namereply)
+        self.add_global_handler("whoisuser", self.on_whoisreply)
+
+        if "password" in config:
+            password = config["password"]
+        else:
+            password = None
+
+        if config["ssl"].lower() == "yes":
+            factory = ircclient.connection.Factory(wrapper=ssl.wrap_socket)
+        else:
+            self.logger.warning("Hey, we really don't like you not using SSL!")
+            factory = ircclient.connection.Factory()
+
+        try:
+            self.connect(config["server"], int(config["port"]), config["nickname"], password=password,
+                        username=config["username"], ircname=config["realname"], connect_factory=factory)
+        except ircclient.ServerConnectionError, err:
+            self.logger.exception("Failed to connect on port %s" % (config["port"]))
+
+        self.cmdchar = config["cmdchar"]
+        self.config = config
+
+        self.channels = {}
+        self.initial_channels = config["channels"].split()
+
+        self.users = {}
+
+        self.temp_state = {}
+
+        #self.channels = [Channel(x) for x in config["channels"].split()]
+
+    def join_defaults(self, server, event):
+        if server == self:
+            for channel in self.initial_channels:
+                self.join(channel)
+
+    def update_channel(self, server, event):
+        if server == self:
+            if event.type == "kick":
+                nick = event.arguments[0]
+                host = None
+            elif event.type =="part" or event.type == "join" or event.type == "quit":
+                nick = event.source.nick
+                host = event.source.host
+
+            if nick not in self.users:
+                self.users[nick] = User(self, nick, host)
+            user = self.users[nick]
+
+            if event.type == "quit":
+                for channel in user.channels:
+                    channel.usercount -= 1
+                    if channel.user_count == 0:
+                        del self.channels[channel.name]
+                del self.users[nick]
+                return
+
+            if event.target not in self.channels:
+                self.channels[event.target] = Channel(self, event.target)
+            channel = Channel(self, event.target)
+
+            if event.type == "join":
+                user.join(channel)
+            elif event.type == "part" or event.type == "kick":
+                # TODO: Need to take care of the part when _I_ part a channel, shouldn't track its state anymore
+                user.part(channel)
+                if len(user.channels) == 0:
+                    del self.users[user.nick]
+                if channel.user_count == 0:
+                    del self.channels[channel.name]
+
+    def on_namereply(self, server, event):
+        if server == self:
+            # Hoping that the namreply is only additive! In theory, we shouldn't have missed any users leaving channels though
+            if event.type == "namreply":
+                channel_name = event.arguments[1]
+                try:
+                    channel = self.channels[channel_name]
+                except KeyError:
+                    return #ignore it, we're not in the channel
+
+                for nick in event.arguments[2].strip().split(" "):
+                    if nick not in self.users:
+                        self.users[nick] = User(self, nick)
+                        self.logger.debug("Checking host: " % self.users[nick].host)
+                    self.users[nick].join(channel)
+
+    def on_whoisreply(self, server, event):
+        if server == self:
+            if event.type == "whoisuser":
+                nick = event.arguments[0]
+                host = event.arguments[2]
+                try:
+                    user = self.users[nick]
+                    user.host = host
+                except KeyError:
+                    return # ignore the reply, we don't know about this user
 
 class scrappy:
     """This is our main bot class. Generally, everything past loading/unloading modules is provided
@@ -66,31 +231,6 @@ class scrappy:
         self.load_module("core")
         self.load_module("modmanage")
 
-        self.servers = {}
-        required_items = ["cmdchar","nickname","username","realname",
-                            "server","port","channels", "ssl"]
-        for server in self.config.sections():
-            self.servers[server] = {}
-            for (k,v) in self.config.items(server):
-                self.servers[server][k] = v
-
-            # Ok ok, so ssl is already a key, but I want to coerce it to bool
-            self.servers[server]["ssl"] = self.config.getboolean(server, "ssl")
-
-            # Sanity check
-            errors = False
-            for item in required_items:
-                if item not in self.servers[server]:
-                    errors = True
-                    self.logger.critical("Error: %s not found in configuration." % item)
-                if errors:
-                    sys.exit(1)
-
-            self.servers[server]["channels"] = self.servers[server]["channels"].split()
-            self.servers[server]["port"] = int(self.servers[server]["port"])
-            self.servers[server]["servername"] = server
-
-        self.ircsock = '' #this will be the socket
         self.lock = threading.Lock()
 
         #start the bot
@@ -104,37 +244,17 @@ class scrappy:
         # Create a new socket
         self.ircsock = ircclient.IRC()
 
-        for server in self.servers:
-            server = self.servers[server]
-            try:
-                if server["ssl"]:
-                    factory = ircclient.connection.Factory(wrapper=ssl.wrap_socket)
-                else:
-                    self.logger.warning("Hey, we really don't like you not using SSL!")
-                    factory = ircclient.connection.Factory()
-
-                connection = self.ircsock.server().connect(server["server"], server["port"], server["nickname"],
-                                                            username=server["username"], ircname=server["realname"],
-                                                            connect_factory=factory)
-            except ircclient.ServerConnectionError, err:
-                self.logger.exception("Failed to connect to %s:%s" % (server["server"], server["port"]))
-                connection = None
-
-            #if all goes well, register handlers
-            if connection is not None:
-                connection.add_global_handler("all_events", self.process_event)
-                # One second tick for timed functions
-                connection.execute_every(1, self.on_tick, arguments=(connection,))
-
-            server["connection"] = connection
+        self.servers = {}
+        for servername in self.config.sections():
+            server = ServerState(servername, dict(self.config.items(servername)), self, self.ircsock)
+            self.servers[servername] = server
 
         #enter main event loop after this
         try:
             self.ircsock.process_forever()
         except KeyboardInterrupt:
             for server in self.servers:
-                server = self.servers[server]
-                server["connection"].quit("BAIL OUT!!")
+                self.servers[server].quit("BAIL OUT!!")
 
     ########################################################################
     def shutdown(self, code=0):
@@ -144,18 +264,6 @@ class scrappy:
         code -- Exit code (default 0)
         """
         sys.exit(code)
-
-    ########################################################################
-    def get_server(self, conn):
-        """Get the server associated with a connection
-
-        Arguments:
-        conn -- connection object
-        """
-        for server in self.servers:
-            server = self.servers[server]
-            if conn == server["connection"]:
-                return server
 
     ########################################################################
     ###################
@@ -199,7 +307,7 @@ class scrappy:
         if event.type in self.events:
             for module_events in self.events[event.type].values():
                 for func in module_events:
-                    thread.start_new_thread(func, (self.get_server(conn), event, self))
+                    thread.start_new_thread(func, (conn, event, self))
 
         # If the on_EVENT method doesn't exist, call a NOP-like function instead
         do_nothing = lambda c, e: None
@@ -216,7 +324,7 @@ class scrappy:
         """
         for module_events in self.events["tick"].values():
             for func in module_events:
-                thread.start_new_thread(func, (self.get_server(conn), self))
+                thread.start_new_thread(func, (conn, self))
 
     def load_module(self, name):
         """Loads module

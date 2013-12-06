@@ -26,13 +26,10 @@ class modmanage(Module):
         self.register_cmd("getevents", self.getevents_cmd)
 
     def annoy(self, server, bot):
-        c = server["connection"]
-        c.privmsg("#scrappy", "Tick.")
+        server.privmsg("#scrappy", "Tick.")
 
     def modload_cmd(self, server, event, bot):
         """modload - Loads a module"""
-        c = server["connection"]
-
         param = event.tokens[1]
         msg = ""
         try:
@@ -42,11 +39,10 @@ class modmanage(Module):
         except Exception as err:
             msg = "Unable to load %s." % param
 
-        c.privmsg(event.target, msg)
+        server.privmsg(event.target, msg)
 
     def modunload_cmd(self, server, event, bot):
         """modunload - Unloads a module"""
-        c = server["connection"]
 
         param = event.tokens[1]
         if not param == "modmanage":
@@ -55,20 +51,18 @@ class modmanage(Module):
                 msg = "Module '%s' unloaded successfully." % param
             else:
                 msg = "Module '%s' failed to unload." % param
-            c.privmsg(event.target, msg)
+            server.privmsg(event.target, msg)
         else:
-            c.privmsg(event.target, "You don't want to unload modmanage.")
+            server.privmsg(event.target, "You don't want to unload modmanage.")
 
     def modlist_cmd(self, server, event, bot):
         """modlist - Lists loaded modules"""
-        c = server["connection"]
 
         msg = ", ".join(bot.modules)
         # TODO: Need to split
-        c.privmsg(event.target, msg)
+        server.privmsg(event.target, msg)
 
     def getevents_cmd(self, server, event, bot):
-        c = server["connection"]
         param = event.tokens[1]
 
         if param in bot.events:
@@ -80,8 +74,8 @@ class modmanage(Module):
                         msg.append(callback.__name__)
 
                     msg = ", ".join(msg)
-                    c.privmsg(event.target, "%s: %s" % (module, msg))
+                    server.privmsg(event.target, "%s: %s" % (module, msg))
             else:
-                c.privmsg(event.target, "No callbacks registered for %s event" % param)
+                server.privmsg(event.target, "No callbacks registered for %s event" % param)
         else:
-            c.privmsg(event.target, "%s not a valid event." % param)
+            server.privmsg(event.target, "%s not a valid event." % param)

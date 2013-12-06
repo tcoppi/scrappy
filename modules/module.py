@@ -12,7 +12,7 @@ class Module(object):
 
     def __init__(self, scrap):
         self.command_callbacks = {}
-        self.logger = logging.getLogger("scrappy.%s" % self.__class__.__name__)
+        self.logger = scrap.logger.getChild(self.__class__.__name__)
 
         for model in self.models:
             if not model.table_exists():
@@ -46,7 +46,7 @@ class Module(object):
         event.command = event.tokens[0][1:]
         cmdchar = event.tokens[0][0]
 
-        if cmdchar == server["cmdchar"]: # event is command
+        if cmdchar == server.cmdchar: # event is command
             if event.command in self.command_callbacks:
                 for callback in self.command_callbacks[event.command]:
                     start = time.time()
