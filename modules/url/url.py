@@ -11,7 +11,6 @@ class url(Module):
         self.register_cmd("url", self.url)
 
     def url(self, server, event, bot):
-        c = server["connection"]
 
         try:
             with open("urldb", "r+") as fp:
@@ -33,11 +32,11 @@ class url(Module):
             if identifier in db:
                 url = db[identifier]
             else:
-                c.privmsg(event.target, "This URL isn't in the database!")
+                server.privmsg(event.target, "This URL isn't in the database!")
                 return
 
         else:
-            c.privmsg(event.target, "You need to have a url to look up or store!")
+            server.privmsg(event.target, "You need to have a url to look up or store!")
             return
 
-        c.privmsg(event.target, url)
+        server.privmsg(event.target, url)
