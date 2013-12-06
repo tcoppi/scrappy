@@ -14,13 +14,11 @@ class gcalc(Module):
         self.register_cmd("gcalc", self.gcalc)
 
     def gcalc(self, server, event, bot):
-        c = server["connection"]
-
         query = event.tokens[1:]
         query = urllib.urlencode({'q':query})
 
         if len(query) == 0:
-            c.privmsg(event.source, "Error: no query specified.")
+            server.privmsg(event.source, "Error: no query specified.")
             return
 
         start = '<h2 class=r style="font-size:138%"><b>'
@@ -31,9 +29,9 @@ class gcalc(Module):
         data = search.read()
 
         if data.find(start) == -1:
-            c.privmsg(event.target, "Google Calculator results not found.")
+            server.privmsg(event.target, "Google Calculator results not found.")
         else:
             begin = data.index(start)
             result = data[begin+len(start):begin+data[begin:].index(end)]
             result = result.replace("<font size=-2> </font>",",").replace(" &#215; 10<sup>","E").replace("</sup>","").replace("\xa0",",")
-            c.privmsg(event.source, result)
+            server.privmsg(event.source, result)
