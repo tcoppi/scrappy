@@ -149,9 +149,9 @@ class ServerState(ircclient.ServerConnection):
 
             if event.type == "quit":
                 for channel in user.channels:
-                    channel.usercount -= 1
-                    if channel.user_count == 0:
-                        del self.channels[channel.name]
+                    user.channels[channel].usercount -= 1
+                    if self.channels[channel].user_count == 0:
+                        del self.channels[channel]
                 del self.users[nick]
                 return
 
