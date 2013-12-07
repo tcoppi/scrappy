@@ -48,8 +48,8 @@ class User(object):
             self.server.whois((self.nick,))
             timeout = 1
             time_spent = 0
-            while self._host is None and time_spent < timeout:
-                time_spent += .01
+            while self._host is None and timeout > 0:
+                timeout -= .01
                 time.sleep(.01)
         return self._host
 
@@ -179,7 +179,8 @@ class ServerState(ircclient.ServerConnection):
                 except KeyError:
                     return #ignore it, we're not in the channel
 
-                for nick in event.arguments[2].strip().split(" "):
+                nicks = event.arguments[2].strip()
+                for nick in nicks.split(" "):
                     if nick not in self.users:
                         self.users[nick] = User(self, nick)
                     self.users[nick].join(channel)
