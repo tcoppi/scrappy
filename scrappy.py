@@ -174,10 +174,9 @@ class ServerState(ircclient.ServerConnection):
             # Hoping that the namreply is only additive! In theory, we shouldn't have missed any users leaving channels though
             if event.type == "namreply":
                 channel_name = event.arguments[1]
-                try:
-                    channel = self.channels[channel_name]
-                except KeyError:
-                    return #ignore it, we're not in the channel
+                if channel_name not in self.channels:
+                    self.channels[channel_name] = Channel(self, channel_name)
+                channel = self.channels[channel_name]
 
                 for nick in event.arguments[2].strip().split(" "):
                     if nick not in self.users:
@@ -343,7 +342,7 @@ class scrappy:
             module = getattr(package, name)
             cls = getattr(module, name)
         except AttributeError as err:
-            self.logger.exception("Module '%s' not found, make sure %s/%s.py exists." % (name,name,name,name))
+            self.logger.exception("Module '%s' not found, make sure %s/%s.py exists." % (name,name,name))
             raise err
         except ImportError as err:
             self.logger.exception("No such module '%s'." % name)
