@@ -50,10 +50,10 @@ class TestFloatCmd(TestFloatMod):
 
 class TestBSCmd(TestFloatMod):
     def test_single_token(self):
-        attrs = {'target': 'channel', 'tokens':['!$']}
+        attrs = {'target': 'channel', 'tokens':['!bs']}
         self.event.configure_mock(**attrs)
 
-        self.floatmod_obj.float_cmd(self.server, self.event, self.bot)
+        self.floatmod_obj.bs_cmd(self.server, self.event, self.bot)
 
         self.server.privmsg.assert_called_with('channel', "Not enough arguments, <NUMBER> required.")
 
