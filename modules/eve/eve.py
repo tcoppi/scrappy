@@ -4,7 +4,8 @@ import time
 
 import eveapi.eveapi as eveapi
 
-from module import Module, DBModel
+from ..module import Module
+from ..dbmodel import DBModel
 
 from eve_cache import EveCache
 

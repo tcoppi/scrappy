@@ -224,8 +224,6 @@ class scrappy:
                         "pubmsg":{},
                         "tick":{}}
 
-        sys.path.append(os.path.join(os.getcwd(), "modules"))
-
         # Load these modules before any events occur, since core handles server welcome message
         self.load_module("core")
         self.load_module("modmanage")

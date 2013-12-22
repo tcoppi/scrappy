@@ -1,7 +1,7 @@
-from module import Module
+from ..module import Module
 
-import utility.user.auth.google_oauth as google_oauth
-import utility.user.user as user
+from ..utility.user.auth import google_oauth
+from ..utility.user import user
 
 class auth(Module):
     def __init__(self, scrap):

@@ -5,7 +5,7 @@ from random import randint
 import shelve
 import threading
 
-from module import Module
+from ..module import Module
 
 class insult(Module):
 	def __init__(self, scrap):

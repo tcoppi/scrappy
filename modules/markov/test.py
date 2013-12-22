@@ -1,12 +1,12 @@
 from ..test_module import TestModule
 from mock import Mock, patch
 
-import gcalc
+import markov
 
-class TestGcalc(TestModule):
+class TestMarkov(TestModule):
     def setUp(self):
-        super(TestGcalc, self).setUp()
-        self.gcalc_obj = gcalc.gcalc(self.bot)
+        super(TestMarkov, self).setUp()
+        self.markov_obj = markov.markov(self.bot)
 
     def test_init(self):
         pass

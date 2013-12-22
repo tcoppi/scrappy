@@ -14,7 +14,8 @@ import logging
 
 import peewee
 
-from module import Module, DBModel
+from ..module import Module
+from ..dbmodel import DBModel
 
 logging.getLogger('peewee').setLevel("WARNING")
 class Chain(DBModel):

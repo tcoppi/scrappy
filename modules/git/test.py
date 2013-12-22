@@ -1,12 +1,12 @@
 from ..test_module import TestModule
 from mock import Mock, patch
 
-import gcalc
+import git
 
-class TestGcalc(TestModule):
+class TestGit(TestModule):
     def setUp(self):
-        super(TestGcalc, self).setUp()
-        self.gcalc_obj = gcalc.gcalc(self.bot)
+        super(TestGit, self).setUp()
+        self.git_obj = git.git(self.bot)
 
     def test_init(self):
         pass

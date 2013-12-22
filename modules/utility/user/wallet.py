@@ -1,6 +1,6 @@
 import peewee
 
-from dbmodel import DBModel
+from ...dbmodel import DBModel
 from user import Account
 
 class Wallet(DBModel):

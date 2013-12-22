@@ -1,8 +1,7 @@
-from module import Module
+from ..module import Module
 
 class reverse(Module):
     def __init__(self, scrap):
-        print "reverse loading"
         super(reverse, self).__init__(scrap)
 
         scrap.register_event("reverse", "msg", self.distribute)

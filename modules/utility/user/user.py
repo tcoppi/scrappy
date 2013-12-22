@@ -1,7 +1,7 @@
 import peewee
 import json
 
-from dbmodel import DBModel
+from ...dbmodel import DBModel
 
 class Account(DBModel):
     identifier = peewee.TextField()

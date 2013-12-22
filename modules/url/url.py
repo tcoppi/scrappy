@@ -1,7 +1,7 @@
 import socket
 import cPickle
 
-from module import Module
+from ..module import Module
 
 class url(Module):
     def __init__(self, scrap):

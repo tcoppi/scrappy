@@ -2,7 +2,7 @@ import json
 import requests_oauthlib
 import logging
 
-from utility.user.user import User, Account, AuthBackend, get_user, merge_accounts
+from ..user import User, Account, AuthBackend, get_user, merge_accounts
 
 oauth_logger = logging.getLogger("oauthlib")
 oauth_logger.setLevel(logging.WARNING)

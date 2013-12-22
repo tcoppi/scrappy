@@ -3,7 +3,7 @@
 
 import urllib, httplib
 
-from module import Module
+from ..module import Module
 
 class gcalc(Module):
     def __init__(self, bot):

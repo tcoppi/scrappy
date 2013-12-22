@@ -1,19 +1,16 @@
-import unittest
+from ..test_module import TestModule
 from mock import Mock, patch
 
 # SUT
 import floatmod
 
-class TestModule(unittest.TestCase):
-    def setUp(self):
-        self.bot = Mock()
-        self.server = Mock()
-        self.event = Mock()
-
 class TestFloatMod(TestModule):
     def setUp(self):
         super(TestFloatMod, self).setUp()
         self.floatmod_obj = floatmod.floatmod(self.bot)
+
+    def test_init(self):
+        pass
 
 class TestFloatCmd(TestFloatMod):
     def test_single_token(self):

@@ -1,7 +1,6 @@
 #stuff for loading/unloading/managing/getting stats about modules
 
-from module import Module
-
+from ..module import Module
 
 class modmanage(Module):
     def __init__(self, scrap):

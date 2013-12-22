@@ -1,6 +1,7 @@
-from module import Module, DBModel
+from ..module import Module
+from ..dbmodel import DBModel
 
-from utility.user.user import get_account, Account
+from ..utility.user.user import get_account, Account
 
 import peewee
 

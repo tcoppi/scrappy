@@ -1,12 +1,12 @@
 from ..test_module import TestModule
 from mock import Mock, patch
 
-import gcalc
+import url
 
-class TestGcalc(TestModule):
+class TestURL(TestModule):
     def setUp(self):
-        super(TestGcalc, self).setUp()
-        self.gcalc_obj = gcalc.gcalc(self.bot)
+        super(TestURL, self).setUp()
+        self.url_obj = url.url(self.bot)
 
     def test_init(self):
         pass

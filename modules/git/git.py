@@ -2,7 +2,7 @@ import os
 import os.path
 import subprocess
 
-from module import Module
+from ..module import Module
 
 class git(Module):
     def __init__(self, scrap):

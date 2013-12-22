@@ -1,7 +1,6 @@
 import logging
 import os, os.path
 import time
-from dbmodel import DBModel
 
 class ModuleException(Exception):
     pass
