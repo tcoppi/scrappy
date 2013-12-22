@@ -336,8 +336,9 @@ class scrappy:
             return self.reload_module(name)
 
         try:
-            package = __import__(name+"."+name)
-            module = getattr(package, name)
+            # from modules.core.core import core
+            module = __import__("modules.%s.%s" % (name, name), globals(), locals(), [name])
+            # Get the class
             cls = getattr(module, name)
         except AttributeError as err:
             self.logger.exception("Module '%s' not found, make sure %s/%s.py exists." % (name,name,name))
