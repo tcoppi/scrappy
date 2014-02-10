@@ -150,7 +150,7 @@ class ServerState(ircclient.ServerConnection):
             if event.type == "quit":
                 for channel in user.channels:
                     user.channels[channel].usercount -= 1
-                    if self.channels[channel].user_count == 0:
+                    if self.channels[channel].usercount == 0:
                         del self.channels[channel]
                 del self.users[nick]
                 return
@@ -166,7 +166,7 @@ class ServerState(ircclient.ServerConnection):
                 user.part(channel)
                 if len(user.channels) == 0:
                     del self.users[user.nick]
-                if channel.user_count == 0:
+                if channel.usercount == 0:
                     del self.channels[channel.name]
 
     def on_namereply(self, server, event, bot):
