@@ -76,7 +76,7 @@ class Channel(object):
     def __init__(self, server, channel_name):
         self.logger = server.logger.getChild(channel_name)
         self.server = server
-        self.name = channel_name
+        self.name = channel_name.lower()
         self.usercount = 0
 
 class ServerState(ircclient.ServerConnection):
