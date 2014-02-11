@@ -63,7 +63,11 @@ class User(object):
 
     def part(self, channel):
         channel.usercount -= 1
-        del self.channels[channel.name]
+        self.channels.remove(channel)
+
+    def quit(self):
+        for channel in self.channels:
+            self.channels[channel].usercount -= 1
 
     def __str__(self):
         return "%s@%s" % (self.nick, self._host)
@@ -148,8 +152,8 @@ class ServerState(ircclient.ServerConnection):
             user = self.users[nick]
 
             if event.type == "quit":
+                user.quit()
                 for channel in user.channels:
-                    user.channels[channel].usercount -= 1
                     if self.channels[channel].usercount == 0:
                         del self.channels[channel]
                 del self.users[nick]
