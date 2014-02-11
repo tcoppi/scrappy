@@ -77,7 +77,8 @@ class DecodingLineBuffer(LineBuffer):
     True
     """
     encoding = 'utf-8'
-    errors = 'strict'
+#    errors = 'strict'
+    errors = 'replace'
 
     def lines(self):
         return (line.decode(self.encoding, self.errors)
