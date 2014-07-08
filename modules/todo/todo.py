@@ -51,24 +51,50 @@ class todo(Module):
             server.privmsg(event.target, todo_str)
 
     def del_todo(self, server, event, bot):
-        if len(event.arg) == 1:
-            try:
-                num = int(event.arg[0])
-            except ValueError:
-                server.privmsg(event.target, "%s not a valid todo ID" % num)
-                return
-        else:
-            #TODO: Tell the user correct syntax
-            server.privmsg(event.target, "Incorrect syntax")
-            return
+    	    
+    	    #split on '-' to accept both todo-del X and todo-del X-Y
+    	    items = event.arg[0].split('-')
 
-        dq = Todo.delete().where(Todo.server==server.server_name, Todo.channel==event.target, Todo.id==num)
-        deleted = dq.execute()
+    	    if len(items) > 2:
+    	    	    server.privmsg(event.target, "Incorrect syntax")
+    	    	    return
+    	    elif len(items) == 1:
+    	    	    #remove a single item
+    	    	    try:
+    	    	    	    item = int(items[0])
+    	    	    except ValueError:
+    	    	    	    server.privmsg(event.target, "%s not a valid todo ID" % item)
+    	    	    	    return
+    	    	    dq = Todo.delete().where(Todo.server == server.server_name, Todo.channel == event.target, Todo.id == item)
+    	    	    deleted = dq.execute()
+    	    	    
+    	    	    if deleted:
+    	    	    	    server.privmsg(event.target, "Todo %d removed" % item)
+    	    	    else:
+    	    	    	    server.privmsg(event.target, "Todo %d does not exist." % item)
+    	    	    	    
+    	    elif len(items) == 2:
+    	    	    #remove range of items
+    	    	    start = int(items[0])
+    	    	    end = int(items[1])
+    	    	    
+    	    	    if end <= start:
+    	    	    	    server.privmsg(event.target, "Invalid range.")
+    	    	    	    return
+    	    	    
+    	    	    while start <= end:
+    	    	    	    dq = Todo.delete().where(Todo.server == server.server_name, Todo.channel == event.target, Todo.id == start)
+    	    	    	    deleted = dq.execute()
+    	    	    	    
+    	    	    	    if deleted:
+    	    	    	    	    server.privmsg(event.target, "Todo %d removed" % start)
+    	    	    	    else:
+    	    	    	    	    server.privmsg(event.target, "Todo %d does not exist." % start)
+    	    	    	    	    
+    	    	    	    start += 1
+    	    
 
-        if deleted:
-            server.privmsg(event.target, "Todo %d removed" % num)
-        else:
-            server.privmsg(event.target, "Todo %d does not exist." % num)
+    	    
 
 
     def done_todo(self, server, event, bot):
