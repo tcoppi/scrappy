@@ -35,7 +35,7 @@ class Module(object):
         return docstrings
 
     def distribute(self, server, event, bot):
-        event.tokens = event.arguments[0].split(" ")
+        event.tokens = event.arguments[0].split()
         if not event.tokens:
             return
 
