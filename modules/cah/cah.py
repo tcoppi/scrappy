@@ -4,6 +4,8 @@ import threading
 from module import Module
 from cards import Cards, init_db
 
+from CAHGame import CAHGame
+
 class cah(Module):
         models = [Cards]
 
@@ -12,7 +14,8 @@ class cah(Module):
 
 		self.lock = threading.Lock()
 
-
+		self.game = CAHGame()
+			
 		scrap.register_event("cah", "msg", self.distribute)
 		# but how do you handle commands for privmsg?
 		self.register_cmd("cah", self.cah)
@@ -72,10 +75,12 @@ class cah(Module):
 	def cah_start(self, server, event, bot):
 		'''Start a new game.'''
 		server.privmsg(event.target, "PLACEHOLDER: starting new game")
-
+		
 	def cah_join(self, server, event, bot):
 		'''Join the current game.'''
 		server.privmsg(event.target, "PLACEHOLDER: joining the game")
+		self.game.add_player(event.source)
+		server.privmsg(event.target, "%s joined game." % self.game.players[len(self.game.players)-1].name)
 
 	def cah_end(self, server, event, bot):
 		'''Abort the current game.'''
