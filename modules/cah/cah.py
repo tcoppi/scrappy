@@ -78,6 +78,7 @@ class cah(Module):
 		
 	def cah_join(self, server, event, bot):
 		'''Join the current game.'''
+		# make this error check and suck less
 		server.privmsg(event.target, "PLACEHOLDER: joining the game")
 		self.game.add_player(event.source)
 		server.privmsg(event.target, "%s joined game." % self.game.players[len(self.game.players)-1].name)

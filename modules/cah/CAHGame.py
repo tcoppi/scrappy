@@ -24,6 +24,7 @@ class CAHGame:
 				"German dungeon porn.",
 				"White people.",
 				"Getting so angry that you pop a boner.",
+				"Freedom of Speech",
 			]
 		}
 		
