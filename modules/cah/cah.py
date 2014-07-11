@@ -19,11 +19,11 @@ class cah(Module):
 	def cah(self, server, event, bot):
 		'''Main command to parse arguments to !cah trigger.'''
 		
-		usage = "Usage goes here"
-		
+		usage = "start, join, end, add <black|white> <body>, select <1 2 ... N>,"
+
 		if len(event.tokens) >= 2:
-			arg = event.tokens[1]
-			msg = event.tokens[2:]
+			arg = event.arg[0]
+			msg = event.arg[1:]
 			
 			if arg == "start":
 				self.cah_start(server, event, bot)
@@ -41,6 +41,22 @@ class cah(Module):
 					self.cah_add(server, event, bot, color, body)
 				else:
 					usage = "Add card usage"
+					server.privmsg(event.target, usage)
+					
+			elif arg == "select":
+				if len(msg) >= 1:
+					cards = msg[0:]
+					self.cah_select(server, event, bot, cards)
+				else:
+					usage = "Select card usage"
+					server.privmsg(event.target, usage)
+					
+			elif arg == "vote":
+				if len(msg) == 1:
+					#going to need some args here
+					self.cah_vote(server, event, bot, msg[0])
+				else:
+					usage = "Vote usage"
 					server.privmsg(event.target, usage)
 			
 		else:
@@ -65,3 +81,11 @@ class cah(Module):
 	def cah_add(self, server, event, bot, color, body):
 		'''Add a card to the database.'''
 		server.privmsg(event.target, "PLACEHOLDER: adding %s card: %s" % (color, body))
+		
+	def cah_select(self, server, event, bot, cards):
+		'''Select card(s) to play from your hand.'''
+		server.privmsg(event.target, "PLACEHOLDER: selecting cards %s" % ', '.join(cards))
+		
+	def cah_vote(self, server, event, bot, voted):
+		'''Czar voting for group #.'''
+		server.privmsg(event.target, "PLACEHOLDER: czar is voting for %s" % voted)
