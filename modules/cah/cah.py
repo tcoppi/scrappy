@@ -12,7 +12,6 @@ class cah(Module):
 			
 		scrap.register_event("cah", "msg", self.distribute)
 		# but how do you handle commands for privmsg?
-		#scrap.register_event("cah", "privmsg", self.distribute)
 		self.register_cmd("cah", self.cah)
 		
 		
