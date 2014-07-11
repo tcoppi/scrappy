@@ -22,5 +22,7 @@ def init_db():
     except ValueError:
         return "Couldn't parse cards JSON."
     massaged_dicts = [{'color':'white' if card["cardType"]=='A' else 'black', 'body':card["text"]} for card in cards]
-    Cards.insert_many(massaged_dicts).execute()
+    for card in massaged_dicts:
+        q = Cards.insert(massaged_dicts)
+        q.execute()
     return "Successfully grabbed cards."
