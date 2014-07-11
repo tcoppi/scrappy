@@ -12,6 +12,7 @@ class testmulti(Module):
         self.register_cmd("testmulti", self.hailandon)
         self.register_cmd("testmulti", self.haiomega)
         self.register_cmd("testmulti", self.haicoppi)
+        self.register_cmd("testmulti", self.haidrouhard)
         self.register_cmd("testmulti", self.sosleepy)
 
     def testmulti(self, server, event, bot):
@@ -25,6 +26,9 @@ class testmulti(Module):
 
     def hailandon(self, server, event, bot):
         server.privmsg("Landon", "Ohai")
+
+    def haidrouhard(self, server, event, bot):
+        server.privmsg("jdrouhard", "Ohai")
 
     def sosleepy(self, server, event, bot):
         sleep(5)
