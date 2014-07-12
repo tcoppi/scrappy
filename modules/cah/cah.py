@@ -25,7 +25,7 @@ class cah(Module):
 	def cah(self, server, event, bot):
 		'''Main command to parse arguments to !cah trigger.'''
 
-		usage = "start, join, end, add <black|white> <body>, select <1 2 ... N>,"
+		usage = "new, start, join, end, add <black|white> <body>, select <1 2 ... N>,"
 
 		if len(event.tokens) >= 2:
 			arg = event.arg[0]
@@ -33,6 +33,9 @@ class cah(Module):
 
 			if arg == "start":
 				self.cah_start(server, event, bot)
+				
+			elif arg == "new":
+				self.cah_new(server, event, bot)
 
 			elif arg == "join":
 				self.cah_join(server, event, bot)
@@ -72,20 +75,38 @@ class cah(Module):
 # Function prototypes to fill in
 ################################################################################
 
+	def cah_new(self, server, event, bot):
+		'''Initialize a new game.'''
+		#check if game is already running
+		if self.game.running:
+			msg = "A game is already running!  Use '@cah end' to end it."
+		else:
+			msg = "A new game of Cards Against Humanity has started!  Use '%scah join' to join the game." % server.cmdchar
+			self.game = CAHGame()
+			self.game.running = True
+		server.privmsg(event.target, msg)
+		
 	def cah_start(self, server, event, bot):
-		'''Start a new game.'''
+		'''Start the game once all players have joined..'''
 		server.privmsg(event.target, "PLACEHOLDER: starting new game")
 		
 	def cah_join(self, server, event, bot):
 		'''Join the current game.'''
 		# make this error check and suck less
 		server.privmsg(event.target, "PLACEHOLDER: joining the game")
-		self.game.add_player(event.source)
+		self.game.add_player(event.source.split('!')[0])
 		server.privmsg(event.target, "%s joined game." % self.game.players[len(self.game.players)-1].name)
 
 	def cah_end(self, server, event, bot):
 		'''Abort the current game.'''
-		server.privmsg(event.target, "PLACEHOLDER: aborting the game")
+		#check if game is already running
+		if self.game.running:
+			msg = "The game has ended."
+			self.game.running = False
+		else:
+			msg = "There's no game running!  Use '@cah new' to start a new game."
+			
+		server.privmsg(event.target, msg)
 
 	def cah_add(self, server, event, bot, color, body):
 		'''Add a card to the database.'''

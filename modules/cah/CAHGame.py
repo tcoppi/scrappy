@@ -33,13 +33,26 @@ class CAHGame:
 	def add_player(self, name):
 		self.players.append(Player(name))
 		
+	#start the game
+	def start(self):
+		pass
+		
 
+	def draw(self, color):
+		'''Draws a random card of <color> from the databse and returns a Card object.'''
+		pass
 
 
 #Utility class to manage Players
 class Player:
 	def __init__(self, name):
-		self.name = name.split('!')[0] #Player name (IRC nick)
+		self.name = name #Player name (IRC nick)
 		self.score = 0
 		self.hand = {}
 		self.isCzar = False
+		
+#Utiliy class for a Card
+class Card:
+	def __init__(self, color, body):
+		self.color = color
+		self.body = body
