@@ -2,7 +2,7 @@
 
 import threading
 from module import Module
-from cards import Cards, init_db
+from cards import Cards, add_card, init_db
 
 from CAHGame import CAHGame
 
@@ -109,7 +109,8 @@ class cah(Module):
 
         def cah_add(self, server, event, bot, color, body):
                 '''Add a card to the database.'''
-                server.privmsg(event.target, "PLACEHOLDER: adding %s card: %s" % (color, body))
+                add_card(color, body)
+                server.privmsg(event.target, "Added %s card: %s" % (color, body))
 
         def cah_select(self, server, event, bot, cards):
                 '''Select card(s) to play from your hand.'''
