@@ -28,53 +28,66 @@ class cah(Module):
         '''Main command to parse arguments to !cah trigger.'''
 
         usage = "new, start, join, end, add <black|white> <body>, select <1 2 ... N>,"
+        if self.game.running:
+            players = [x.name for x in self.game.players]
+            if event.type == "privmsg":
+                if event.source.nick not in players:
+                    server.privmsg(event.source.nick, "There is a game currently running in another channel, please wait until it finishes.")
+                    return
+            elif event.type == "pubmsg":
+                if event.target != self.game.channel:
+                    server.privmsg(event.target, "There is a game currently running in another channel, please wait until it finishes.")
+                    return
 
         if len(event.tokens) >= 2:
             arg = event.arg[0]
             msg = event.arg[1:]
+            if event.type == "pubmsg":
+                if arg == "start":
+                    self.cah_start(server, event, bot)
 
-            if arg == "start":
-                self.cah_start(server, event, bot)
+                elif arg == "new":
+                    self.cah_new(server, event, bot)
 
-            elif arg == "new":
-                self.cah_new(server, event, bot)
+                elif arg == "join":
+                    self.cah_join(server, event, bot)
 
-            elif arg == "join":
-                self.cah_join(server, event, bot)
+                elif arg == "end":
+                    self.cah_end(server, event, bot)
 
-            elif arg == "end":
-                self.cah_end(server, event, bot)
+            elif event.type =="privmsg":
+                if arg == "select":
+                    if len(msg) >= 1:
+                        cards = msg[0:]
+                        self.cah_select(server, event, bot, cards)
+                    else:
+                        usage = "Select card usage"
+                        server.privmsg(event.target, usage)
 
-            elif arg == "add":
-                if len(msg) >= 2:
+            else:
+                if arg == "add":
+                    if len(msg) >= 2:
+                        color = msg[0]
+                        body = ' '.join(msg[1:])
+                        self.cah_add(server, event, bot, color, body)
+                    else:
+                        usage = "Add card usage"
+                        server.privmsg(event.target, usage)
+
+                elif arg == "vote":
+                    if len(msg) == 1:
+                        #going to need some args here
+                        self.cah_vote(server, event, bot, msg[0])
+                    else:
+                        usage = "Vote usage"
+                        server.privmsg(event.target, usage)
+
+                elif arg == "draw":
                     color = msg[0]
-                    body = ' '.join(msg[1:])
-                    self.cah_add(server, event, bot, color, body)
-                else:
-                    usage = "Add card usage"
-                    server.privmsg(event.target, usage)
+                    self.cah_draw(server, event, bot, color)
 
-            elif arg == "select":
-                if len(msg) >= 1:
-                    cards = msg[0:]
-                    self.cah_select(server, event, bot, cards)
-                else:
-                    usage = "Select card usage"
-                    server.privmsg(event.target, usage)
-
-            elif arg == "vote":
-                if len(msg) == 1:
-                    #going to need some args here
-                    self.cah_vote(server, event, bot, msg[0])
-                else:
-                    usage = "Vote usage"
-                    server.privmsg(event.target, usage)
-            elif arg == "draw":
-                color = msg[0]
-                self.cah_draw(server, event, bot, color)
-
-            elif arg == "madlib":
-                self.cah_madlib(server, event, bot)
+                elif arg == "madlib":
+                    self.cah_madlib(server, event, bot)
 
         else:
             server.privmsg(event.target, usage)
@@ -92,6 +105,7 @@ class cah(Module):
             msg = "A new game of Cards Against Humanity has started!  Use '%scah join' to join the game." % server.cmdchar
             self.game = CAHGame()
             self.game.running = True
+            self.game.channel = event.target
         server.privmsg(event.target, msg)
 
     def cah_start(self, server, event, bot):
@@ -109,6 +123,7 @@ class cah(Module):
         if self.game.running:
             msg = "The game has ended."
             self.game.running = False
+            self.game.channel = ""
         else:
             msg = "There's no game running!  Use '@cah new' to start a new game."
 
