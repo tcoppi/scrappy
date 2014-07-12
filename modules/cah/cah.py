@@ -4,6 +4,8 @@ import threading
 from module import Module
 from cards import Cards, add_card, init_db
 
+from cards import Deck
+
 from CAHGame import CAHGame
 
 class cah(Module):
@@ -66,6 +68,12 @@ class cah(Module):
                                 else:
                                         usage = "Vote usage"
                                         server.privmsg(event.target, usage)
+                        elif arg == "draw":
+                                color = msg[0]
+                                self.cah_draw(server, event, bot, color)
+                                
+                        elif arg == "madlib":
+                                self.cah_madlib(server, event, bot)
 
                 else:
                         server.privmsg(event.target, usage)
@@ -122,3 +130,26 @@ class cah(Module):
             server.privmsg(event.target, "Adding cards to DB")
             init_result = init_db()
             server.privmsg(event.target, init_result)
+            
+        def cah_draw(self, server, event, bot, color):
+                '''For testing only, delete later.'''
+                d = Deck()
+                c = d.draw(color)
+                server.privmsg(event.target, c.body)
+                
+        def cah_madlib(self, server, event, bot):
+                '''Entertaining function for dev, delete later.'''
+                d = Deck()
+                b = d.draw("black")
+                blanks = b.body.count('_')
+                madlib = b.body
+                
+                if blanks == 0:
+                        madlib += '\t'.join(d.draw("white").body.rstrip('.'))
+                else:
+                        while blanks > 0:
+                                w = d.draw("white")
+                                madlib = madlib.replace('_', w.body.rstrip('.'), 1)
+                                blanks -= 1
+                        
+                server.privmsg(event.target, madlib)
