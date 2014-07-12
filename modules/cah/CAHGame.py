@@ -27,6 +27,12 @@ class CAHGame:
         # Keep track of the current channel
         self.channel = ""
 
+        # Who is the current czar in self.players?
+        self.current_czar = 0
+
+        # What is the current black card?
+        self.current_card = None
+
     #add a new player to the game
     def add_player(self, name):
         #check to see if player already in game
@@ -51,6 +57,17 @@ class CAHGame:
             handSize += 1
            
         return player.hand
+
+    def choose_czar(self):
+        self.current_czar = (self.current_czar + 1) % len(self.players)
+        return self.players[self.current_czar]
+
+    def deal_black(self):
+        try:
+            self.current_card = self.deck.draw("black")
+            return self.current_card
+        except NoMoreCards:
+            return None
 
 #Utility class to manage Players
 class Player:
