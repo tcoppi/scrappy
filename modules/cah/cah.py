@@ -21,7 +21,6 @@ class cah(Module):
                 self.register_cmd("cah", self.cah)
                 self.register_cmd("cah-init", self.cah_init)
 
-
         def cah(self, server, event, bot):
                 '''Main command to parse arguments to !cah trigger.'''
 

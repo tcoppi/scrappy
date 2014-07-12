@@ -10,6 +10,33 @@ JSON_LOCATION = "https://raw.githubusercontent.com/samurailink3/hangouts-against
 class Cards(DBModel):
     color = peewee.TextField()
     body = peewee.TextField()
+    drawn = peewee.BooleanField(default=False)
+
+class NoMoreCards(Exception):
+    pass
+
+class Deck(object):
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        Cards.update(drawn=False).execute()
+
+    def draw(self, color):
+        try:
+            card = Cards.select().where(Cards.color==color, Cards.drawn==False).order_by(peewee.fn.Random()).get()
+        except Cards.DoesNotExist as e:
+            raise NoMoreCards('No more %s cards' % color)
+        card.update(drawn=True).where(Cards.id == card.id).execute()
+        return card
+
+    @property
+    def black_count(self):
+        return Cards.select().where(Cards.drawn==False, Cards.color=="black").count()
+
+    @property
+    def white_count(self):
+        return Cards.select().where(Cards.drawn==False, Cards.color=="white").count()
 
 def init_db():
     try:
@@ -23,6 +50,8 @@ def init_db():
         return "Couldn't parse cards JSON."
     massaged_dicts = [{'color':'white' if card["cardType"]=='A' else 'black', 'body':card["text"]} for card in cards]
     for card in massaged_dicts:
-        q = Cards.insert(**card)
-        q.execute()
+        add_card(card["color"], card["body"])
     return "Successfully grabbed cards."
+
+def add_card(color, body):
+    Cards.insert(color=color, body=body).execute()
