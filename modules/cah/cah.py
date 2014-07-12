@@ -141,30 +141,34 @@ class cah(Module):
     def cah_add(self, server, event, bot, color, body):
         '''Add a card to the database.'''
         add_card(color, body)
-        server.privmsg(event.target, "Added %s card: %s" % (color, body))
+        replyto = event.target if event.type == "pubmsg" else event.source.nick
+        server.privmsg(replyto, "Added %s card: %s" % (color, body))
 
     #PRIVMSG
     def cah_select(self, server, event, bot, cards):
         '''Select card(s) to play from your hand.'''
-        server.privmsg(event.target, "PLACEHOLDER: selecting cards %s" % ', '.join(cards))
+        server.privmsg(event.source.nick, "PLACEHOLDER: selecting cards %s" % ', '.join(cards))
 
     #PUBMSG or PRIVMSG
     def cah_vote(self, server, event, bot, voted):
         '''Czar voting for group #.'''
-        server.privmsg(event.target, "PLACEHOLDER: czar is voting for %s" % voted)
+        replyto = event.target if event.type == "pubmsg" else event.source.nick
+        server.privmsg(replyto, "PLACEHOLDER: czar is voting for %s" % voted)
 
     #PUBMSG or PRIVMSG
     def cah_init(self, server, event, bot):
-        server.privmsg(event.target, "Adding cards to DB")
+        replyto = event.target if event.type == "pubmsg" else event.source.nick
+        server.privmsg(replyto, "Adding cards to DB")
         init_result = init_db()
-        server.privmsg(event.target, init_result)
+        server.privmsg(replyto, init_result)
 
     #PUBMSG or PRIVMSG
     def cah_draw(self, server, event, bot, color):
         '''For testing only, delete later.'''
         d = Deck()
         c = d.draw(color)
-        server.privmsg(event.target, c.body)
+        replyto = event.target if event.type == "pubmsg" else event.source.nick
+        server.privmsg(replyto, c.body)
 
     #PUBMSG or PRIVMSG
     def cah_madlib(self, server, event, bot):
@@ -182,4 +186,5 @@ class cah(Module):
                 replacements.append("_%s_" % d.draw("white").body.rstrip('.'))
             madlib = madlib % tuple(replacements)
 
-        server.privmsg(event.target, madlib)
+        replyto = event.target if event.type == "pubmsg" else event.source.nick
+        server.privmsg(replyto, madlib)
