@@ -141,15 +141,16 @@ class cah(Module):
                 '''Entertaining function for dev, delete later.'''
                 d = Deck()
                 b = d.draw("black")
-                blanks = b.body.count('_')
                 madlib = b.body
-                
+                blanks = madlib.count('_')
                 if blanks == 0:
                         madlib += ' ' + d.draw("white").body.rstrip('.')
                 else:
                         while blanks > 0:
                                 w = d.draw("white")
-                                madlib = madlib.replace('_', w.body.rstrip('.'), 1)
+                                madlib = madlib.replace('_', "<<%s>>" % w.body.rstrip('.'), 1)
                                 blanks -= 1
+                        
+
                         
                 server.privmsg(event.target, madlib)
