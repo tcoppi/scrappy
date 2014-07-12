@@ -45,17 +45,21 @@ class cah(Module):
             if event.type == "pubmsg":
                 if arg == "start":
                     self.cah_start(server, event, bot)
+                    return
 
                 elif arg == "new":
                     self.cah_new(server, event, bot)
+                    return
 
                 elif arg == "join":
                     self.cah_join(server, event, bot)
+                    return
 
                 elif arg == "end":
                     self.cah_end(server, event, bot)
+                    return
 
-            elif event.type =="privmsg":
+            elif event.type == "privmsg":
                 if arg == "select":
                     if len(msg) >= 1:
                         cards = msg[0:]
@@ -63,31 +67,31 @@ class cah(Module):
                     else:
                         usage = "Select card usage"
                         server.privmsg(event.target, usage)
+                    return
 
-            else:
-                if arg == "add":
-                    if len(msg) >= 2:
-                        color = msg[0]
-                        body = ' '.join(msg[1:])
-                        self.cah_add(server, event, bot, color, body)
-                    else:
-                        usage = "Add card usage"
-                        server.privmsg(event.target, usage)
-
-                elif arg == "vote":
-                    if len(msg) == 1:
-                        #going to need some args here
-                        self.cah_vote(server, event, bot, msg[0])
-                    else:
-                        usage = "Vote usage"
-                        server.privmsg(event.target, usage)
-
-                elif arg == "draw":
+            if arg == "add":
+                if len(msg) >= 2:
                     color = msg[0]
-                    self.cah_draw(server, event, bot, color)
+                    body = ' '.join(msg[1:])
+                    self.cah_add(server, event, bot, color, body)
+                else:
+                    usage = "Add card usage"
+                    server.privmsg(event.target, usage)
 
-                elif arg == "madlib":
-                    self.cah_madlib(server, event, bot)
+            elif arg == "vote":
+                if len(msg) == 1:
+                    #going to need some args here
+                    self.cah_vote(server, event, bot, msg[0])
+                else:
+                    usage = "Vote usage"
+                    server.privmsg(event.target, usage)
+
+            elif arg == "draw":
+                color = msg[0]
+                self.cah_draw(server, event, bot, color)
+
+            elif arg == "madlib":
+                self.cah_madlib(server, event, bot)
 
         else:
             server.privmsg(event.target, usage)
