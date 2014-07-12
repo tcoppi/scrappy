@@ -2,7 +2,14 @@
 
 from cards import Deck, NoMoreCards
 
-
+# GAME LOOP
+# Deal
+# Choose Czar
+# Black card shown
+# WAIT ON EVERYONE TO !cah select (via PM)
+# Display combinations
+# WAIT ON CZAR to !cah vote
+# GOTO 1
 class CAHGame:
     def __init__(self):
         self.status = "Loaded CAHGame."
@@ -44,7 +51,6 @@ class CAHGame:
             handSize += 1
            
         return player.hand
-
 
 #Utility class to manage Players
 class Player:
