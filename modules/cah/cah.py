@@ -29,9 +29,8 @@ class cah(Module):
 
         usage = "new, start, join, end, add <black|white> <body>, select <1 2 ... N>,"
         if self.game is not None and self.game.running:
-            players = [x.name for x in self.game.players]
             if event.type == "privmsg":
-                if event.source.nick not in players:
+                if self.game.get_player(event.source.nick) is None:
                     server.privmsg(event.source.nick, "There is a game currently running in another channel, please wait until it finishes.")
                     return
             elif event.type == "pubmsg":
@@ -148,7 +147,16 @@ class cah(Module):
     #PRIVMSG
     def cah_select(self, server, event, bot, cards):
         '''Select card(s) to play from your hand.'''
-        server.privmsg(event.source.nick, "PLACEHOLDER: selecting cards %s" % ', '.join(cards))
+        sanitized_cards = []
+        for card in cards:
+            try:
+                sanitized_cards.append(int(card))
+            except ValueError:
+                server.privmsg(event.source.nick, "'%s' is not a valid card." % card)
+                return
+
+        player = self.game.get_player(event.source.nick)
+        self.game.select(player, sanitized_cards)
 
     #PUBMSG or PRIVMSG
     def cah_vote(self, server, event, bot, voted):
