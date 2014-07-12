@@ -30,13 +30,9 @@ class Deck(object):
         card.update(drawn=True).where(Cards.id == card.id).execute()
         return card
 
-    @property
-    def black_count(self):
-        return Cards.select().where(Cards.drawn==False, Cards.color=="black").count()
+    def count(self, color):
+        return Cards.select().where(Cards.drawn==False, Cards.color==color).count()
 
-    @property
-    def white_count(self):
-        return Cards.select().where(Cards.drawn==False, Cards.color=="white").count()
 
 def init_db():
     try:
