@@ -152,5 +152,6 @@ class cah(Module):
                                 blanks -= 1
                         
 
-                        
+                madlib = madlib.replace('<<', '__')
+                madlib = madlib.replace('>>', '__')
                 server.privmsg(event.target, madlib)
