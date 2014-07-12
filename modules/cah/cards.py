@@ -14,7 +14,7 @@ class Cards(DBModel):
 def init_db():
     try:
         card_json = urllib2.urlopen(JSON_LOCATION)
-    except URLError:
+    except urllib2.URLError:
         return "Couldn't fetch cards file."
     card_json = card_json.read().replace("masterCards = ","")
     try:
