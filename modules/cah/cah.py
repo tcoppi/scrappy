@@ -121,8 +121,12 @@ class cah(Module):
     #PUBMSG
     def cah_join(self, server, event, bot):
         '''Join the current game.'''
-        self.game.add_player(event.source.nick)
-        server.privmsg(event.target, "%s joined game." % self.game.players[-1].name)
+        player = self.game.add_player(event.source.nick)
+        #server.privmsg(event.target, "%s joined game." % player.name)
+        if player:
+            server.privmsg(event.target, ' '.join('[%s]' % x.body for x in player.hand))
+        else:
+            server.privmsg(event.target, "Already joined.")
 
     #PUBMSg
     def cah_end(self, server, event, bot):

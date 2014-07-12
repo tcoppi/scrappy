@@ -22,11 +22,28 @@ class CAHGame:
 
     #add a new player to the game
     def add_player(self, name):
-        self.players.append(Player(name))
+        #check to see if player already in game
+        if name in [p.name for p in self.players]:
+            return False
+        else:
+            player = Player(name)
+            self.players.append(player)
+            self.deal(player)
+            return player
 
     #start the game
     def start(self):
         pass
+
+    #deal cards to player until hand size is 10
+    def deal(self, player):
+        handSize = len(player.hand)
+        
+        while handSize < 10:
+            player.hand.append(self.deck.draw("white"))
+            handSize += 1
+           
+        return player.hand
 
 
 #Utility class to manage Players
@@ -34,5 +51,7 @@ class Player:
     def __init__(self, name):
         self.name = name  #Player name (IRC nick)
         self.score = 0
-        self.hand = {}
+        self.hand = []
         self.isCzar = False
+        
+       
