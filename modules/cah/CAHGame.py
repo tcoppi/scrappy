@@ -10,7 +10,7 @@ from cards import Deck, NoMoreCards
 # Display combinations
 # WAIT ON CZAR to !cah vote
 # GOTO 1
-class CAHGame:
+class CAHGame(object):
     def __init__(self):
         self.status = "Loaded CAHGame."
 
@@ -70,11 +70,9 @@ class CAHGame:
             return None
 
 #Utility class to manage Players
-class Player:
+class Player(object):
     def __init__(self, name):
         self.name = name  #Player name (IRC nick)
         self.score = 0
         self.hand = []
         self.isCzar = False
-        
-       
