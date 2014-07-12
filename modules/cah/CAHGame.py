@@ -34,6 +34,9 @@ class CAHGame(object):
         # What is the current black card?
         self.current_card = None
 
+        # Cards submitted
+        self.submissions = {}
+
     #add a new player to the game
     def add_player(self, name):
         #check to see if player already in game
@@ -45,9 +48,51 @@ class CAHGame(object):
             self.deal(player)
             return player
 
+    def get_player(self, name):
+        players = [p for p in self.players if p.name == name]
+        if len(players) == 1:
+            return players[0]
+        else:
+            return None
+
     #start the game
     def start(self):
-        self.deck.shuffle()
+        self.status = "Waiting for player selection"
+
+    # Choose cards to play
+    def select(self, player, cards):
+        if len(cards) != self.cards_needed:
+            self.message("You need to play %d cards _only_" % self.cards_needed, player)
+            return
+        for card in cards:
+            if card > len(player.hand):
+                self.message("You don't have a card %d in your hand!" % card, player)
+                return
+        self.submissions[player] = [player.hand[card] for card in cards]
+        removed_cards = sorted(cards, reverse=True)
+        for card in removed_cards:
+            player.hand.pop(card)
+        if len(self.submissions) == len(self.players):
+            self.display_selections()
+            self.status = "Waiting for Czar vote"
+
+    # Present the funnies
+    def display_selections(self):
+        self.message("Results are in!")
+        if "_" not in self.current_card.body:
+            self.message(self.current_card.body)
+            for num, submission in enumerate(self.submissions.values()):
+                self.message("%d. %s" % (num, submission[0].body))
+        else:
+            for num, submission in enumerate(self.submissions.values()):
+                replacements = []
+                blanks = submission.count("_")
+                submission = submission[0].replace("_", "%s")
+                for i in range(blanks):
+                    replacements.append("\x02\x1F%s\x0F" % submission[i])
+                submission = submission % tuple(replacements)
+                self.message("%d. %s" % (num, submission))
+        self.message("Now for %s to vote...." % self.players[self.current_czar].name)
 
     #deal cards to player until hand size is 10
     def deal(self, player):
@@ -75,6 +120,13 @@ class CAHGame(object):
             self.server.privmsg(player.name, body)
         else:
             self.server.privmsg(self.channel, body)
+
+    @property
+    def cards_needed(self):
+        if "_" not in self.current_card.body:
+            return 1
+        else:
+            return self.current_card.body.count("_")
 
 #Utility class to manage Players
 class Player(object):
