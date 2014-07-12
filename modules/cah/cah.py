@@ -146,12 +146,10 @@ class cah(Module):
                 if blanks == 0:
                         madlib += ' ' + d.draw("white").body.rstrip('.')
                 else:
-                        while blanks > 0:
-                                w = d.draw("white")
-                                madlib = madlib.replace('_', "<<%s>>" % w.body.rstrip('.'), 1)
-                                blanks -= 1
-                        
+                        replacements = []
+                        madlib = madlib.replace("_", "%s")
+                        for i in range(blanks):
+                                replacements.append("_%s_" % d.draw("white").body.rstrip('.'))
+                        madlib = madlib % tuple(replacements)
 
-                madlib = madlib.replace('<<', '__')
-                madlib = madlib.replace('>>', '__')
                 server.privmsg(event.target, madlib)
