@@ -145,7 +145,7 @@ class cah(Module):
                 madlib = b.body
                 
                 if blanks == 0:
-                        madlib += '\t'.join(d.draw("white").body.rstrip('.'))
+                        madlib += '\t' + d.draw("white").body.rstrip('.')
                 else:
                         while blanks > 0:
                                 w = d.draw("white")
