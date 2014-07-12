@@ -91,10 +91,8 @@ class cah(Module):
                 
         def cah_join(self, server, event, bot):
                 '''Join the current game.'''
-                # make this error check and suck less
-                server.privmsg(event.target, "PLACEHOLDER: joining the game")
-                self.game.add_player(event.source.split('!')[0])
-                server.privmsg(event.target, "%s joined game." % self.game.players[len(self.game.players)-1].name)
+                self.game.add_player(event.source.nick)
+                server.privmsg(event.target, "%s joined game." % self.game.players[-1].name)
 
         def cah_end(self, server, event, bot):
                 '''Abort the current game.'''
@@ -104,7 +102,7 @@ class cah(Module):
                         self.game.running = False
                 else:
                         msg = "There's no game running!  Use '@cah new' to start a new game."
-                        
+
                 server.privmsg(event.target, msg)
 
         def cah_add(self, server, event, bot, color, body):
