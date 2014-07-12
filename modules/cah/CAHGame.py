@@ -11,11 +11,15 @@ from cards import Deck, NoMoreCards
 # WAIT ON CZAR to !cah vote
 # GOTO 1
 class CAHGame(object):
-    def __init__(self):
+    def __init__(self, server, channel):
         self.status = "Loaded CAHGame."
 
+        # Keep track of the current channel/server
+        self.channel = channel
+        self.server = server
+
         #flag to keep track of whether or not game is running
-        self.running = False
+        self.running = True
 
         #list of active players in a game
         self.players = []
@@ -23,9 +27,6 @@ class CAHGame(object):
         #dummy with a small deck for testing.
         #replace with actual card loading from DB later
         self.deck = Deck()
-
-        # Keep track of the current channel
-        self.channel = ""
 
         # Who is the current czar in self.players?
         self.current_czar = 0
@@ -68,6 +69,12 @@ class CAHGame(object):
             return self.current_card
         except NoMoreCards:
             return None
+
+    def message(self, body, player=None):
+        if player is not None:
+            self.server.privmsg(player.name, body)
+        else:
+            self.server.privmsg(self.channel, body)
 
 #Utility class to manage Players
 class Player(object):

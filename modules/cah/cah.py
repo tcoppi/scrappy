@@ -17,7 +17,7 @@ class cah(Module):
 
         self.lock = threading.Lock()
 
-        self.game = CAHGame()
+        self.game = None
 
         scrap.register_event("cah", "msg", self.distribute)
         # but how do you handle commands for privmsg?
@@ -28,7 +28,7 @@ class cah(Module):
         '''Main command to parse arguments to !cah trigger.'''
 
         usage = "new, start, join, end, add <black|white> <body>, select <1 2 ... N>,"
-        if self.game.running:
+        if self.game is not None and self.game.running:
             players = [x.name for x in self.game.players]
             if event.type == "privmsg":
                 if event.source.nick not in players:
@@ -104,13 +104,11 @@ class cah(Module):
     def cah_new(self, server, event, bot):
         '''Initialize a new game.'''
         #check if game is already running
-        if self.game.running:
+        if self.game is not None and self.game.running:
             msg = "A game is already running!  Use '@cah end' to end it."
         else:
             msg = "A new game of Cards Against Humanity has started!  Use '%scah join' to join the game." % server.cmdchar
-            self.game = CAHGame()
-            self.game.running = True
-            self.game.channel = event.target
+            self.game = CAHGame(server, event.target)
         server.privmsg(event.target, msg)
 
     #PUBMSG
