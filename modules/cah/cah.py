@@ -182,7 +182,7 @@ class cah(Module):
             replacements = []
             madlib = madlib.replace("_", "%s")
             for i in range(blanks):
-                replacements.append("_%s_" % d.draw("white").body.rstrip('.'))
+                replacements.append("\x02\x1F%s\x0F" % d.draw("white").body.rstrip('.'))
             madlib = madlib % tuple(replacements)
 
         replyto = event.target if event.type == "pubmsg" else event.source.nick
