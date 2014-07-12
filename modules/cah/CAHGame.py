@@ -33,7 +33,7 @@ class CAHGame:
 
     #start the game
     def start(self):
-        pass
+        self.deck.shuffle()
 
     #deal cards to player until hand size is 10
     def deal(self, player):

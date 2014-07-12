@@ -17,9 +17,9 @@ class NoMoreCards(Exception):
 
 class Deck(object):
     def __init__(self):
-        self.reset()
+        self.shuffle()
 
-    def reset(self):
+    def shuffle(self):
         Cards.update(drawn=False).execute()
 
     def draw(self, color):
