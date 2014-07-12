@@ -133,13 +133,12 @@ class cah(Module):
         '''Abort the current game.'''
         #check if game is already running
         if self.game.running:
-            msg = "The game has ended."
+            server.privmsg(event.target, "The game has ended.")
+            for place, player in enumerate(sorted(self.game.players, key=lambda x: x.score, reverse=True)):
+                server.privmsg(event.target, "%d. %s with %d points" % (place+1, player.name, player.score))
             self.game.running = False
-            self.game.channel = ""
         else:
-            msg = "There's no game running!  Use '@cah new' to start a new game."
-
-        server.privmsg(event.target, msg)
+            server.privmsg(event.target, "There's no game running!  Use '@cah new' to start a new game.")
 
     #PUBMSG or PRIVMSG
     def cah_add(self, server, event, bot, color, body):
@@ -187,7 +186,7 @@ class cah(Module):
             replacements = []
             madlib = madlib.replace("_", "%s")
             for i in range(blanks):
-                replacements.append("_%s_" % d.draw("white").body.rstrip('.'))
+                replacements.append("\x02\x1F%s\x0F" % d.draw("white").body.rstrip('.'))
             madlib = madlib % tuple(replacements)
 
         replyto = event.target if event.type == "pubmsg" else event.source.nick
