@@ -58,6 +58,7 @@ class CAHGame(object):
 
     #start the game
     def start(self):
+        # Reset back to the start
         self.status = "Waiting for player selection"
         self.submissions = {}
         for player in self.players:
@@ -127,6 +128,7 @@ class CAHGame(object):
             return
         winning_player = self.submissions.keys()[vote-1]
         self.message("%s won this round! The winning combination was..." % winning_player.name)
+        winning_player.score += 1
         if "_" not in self.current_card.body:
             self.message(self.current_card.body)
             self.message("%s" % self.submissions.values()[vote-1][0].body)
