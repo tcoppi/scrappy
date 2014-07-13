@@ -12,7 +12,7 @@ from cards import Deck, NoMoreCards
 # GOTO 1
 class CAHGame(object):
     def __init__(self, server, channel):
-        self.status = "Loaded CAHGame."
+        self.status = "Waiting for players to join"
 
         # Keep track of the current channel/server
         self.channel = channel
@@ -29,7 +29,8 @@ class CAHGame(object):
         self.deck = Deck()
 
         # Who is the current czar in self.players?
-        self.current_czar = 0
+        # Starting at -1 so the first iteration has the czar be the first person to join
+        self.current_czar = -1
 
         # What is the current black card?
         self.current_card = None
@@ -58,21 +59,39 @@ class CAHGame(object):
     #start the game
     def start(self):
         self.status = "Waiting for player selection"
+        new_card = self.deal_black()
+        if new_card is None:
+            self.message("Out of black cards! You played a long game!")
+            #self.end()
+            return
+        czar = self.choose_czar()
+        self.message("The new czar is %s" % czar.name)
+        self.message("%s has drawn: %s" % (czar.name, self.current_card.body))
+        for player in [player for player in self.players if player.name != czar.name]:
+            self.message("You will need to choose \x02%d\x0F cards with the 'select X' command, where X is the card's position in your hand." % self.cards_needed, player)
+            if self.cards_needed > 1:
+                self.message("NOTE: To submit multiple cards, use the cah command 'select X Y ...', where the card numbers are separated by a space.", player)
+            self.message("Ok, here's your hand:", player)
+            for num, card in enumerate(player.hand):
+                self.message("%d. %s" % (num+1, card.body), player)
 
     # Choose cards to play
     def select(self, player, cards):
+        if self.status != "Waiting for player selection":
+            self.message("This isn't your turn!", player)
+            return
         if len(cards) != self.cards_needed:
             self.message("You need to play %d cards _only_" % self.cards_needed, player)
             return
         for card in cards:
-            if card > len(player.hand):
+            if card > len(player.hand) or card <= 0:
                 self.message("You don't have a card %d in your hand!" % card, player)
                 return
-        self.submissions[player] = [player.hand[card] for card in cards]
+        self.submissions[player] = [player.hand[card-1] for card in cards]
         removed_cards = sorted(cards, reverse=True)
         for card in removed_cards:
-            player.hand.pop(card)
-        if len(self.submissions) == len(self.players):
+            player.hand.pop(card-1)
+        if len(self.submissions) == len(self.players)-1:
             self.display_selections()
             self.status = "Waiting for Czar vote"
 
@@ -82,16 +101,15 @@ class CAHGame(object):
         if "_" not in self.current_card.body:
             self.message(self.current_card.body)
             for num, submission in enumerate(self.submissions.values()):
-                self.message("%d. %s" % (num, submission[0].body))
+                self.message("%d. %s" % (num+1, submission[0].body))
         else:
             for num, submission in enumerate(self.submissions.values()):
                 replacements = []
-                blanks = submission.count("_")
-                submission = submission[0].replace("_", "%s")
-                for i in range(blanks):
-                    replacements.append("\x02\x1F%s\x0F" % submission[i])
-                submission = submission % tuple(replacements)
-                self.message("%d. %s" % (num, submission))
+                filled_in = self.current_card.body.replace("_", "%s")
+                for i in range(self.cards_needed):
+                    replacements.append("\x02\x1F%s\x0F" % submission[i].body)
+                filled_in = filled_in % tuple(replacements)
+                self.message("%d. %s" % (num+1, filled_in))
         self.message("Now for %s to vote...." % self.players[self.current_czar].name)
 
     #deal cards to player until hand size is 10

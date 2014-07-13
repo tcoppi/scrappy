@@ -113,7 +113,7 @@ class cah(Module):
     #PUBMSG
     def cah_start(self, server, event, bot):
         '''Start the game once all players have joined..'''
-        server.privmsg(event.target, "PLACEHOLDER: starting new game")
+        self.game.start()
 
     #PUBMSG
     def cah_join(self, server, event, bot):
@@ -121,7 +121,7 @@ class cah(Module):
         player = self.game.add_player(event.source.nick)
         #server.privmsg(event.target, "%s joined game." % player.name)
         if player:
-            server.privmsg(event.target, ' '.join('[%s]' % x.body for x in player.hand))
+            server.privmsg(event.target, "%s has joined the game." % player.name)
         else:
             server.privmsg(event.target, "Already joined.")
 
