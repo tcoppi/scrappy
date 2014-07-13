@@ -77,7 +77,7 @@ class CAHGame(object):
 
     # Choose cards to play
     def select(self, player, cards):
-        if self.status != "Waiting for player selection":
+        if self.status != "Waiting for player selection" or self.players[self.current_czar].name == player.name:
             self.message("This isn't your turn!", player)
             return
         if len(cards) != self.cards_needed:
