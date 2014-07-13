@@ -59,6 +59,9 @@ class CAHGame(object):
     #start the game
     def start(self):
         self.status = "Waiting for player selection"
+        self.submissions = {}
+        for player in self.players:
+            self.deal(player)
         new_card = self.deal_black()
         if new_card is None:
             self.message("Out of black cards! You played a long game!")
@@ -112,6 +115,30 @@ class CAHGame(object):
                 self.message("%d. %s" % (num+1, filled_in))
         self.message("Now for %s to vote...." % self.players[self.current_czar].name)
 
+    def vote(self, player, vote):
+        if player.name != self.players[self.current_czar].name:
+            self.message("You are not the Czar!", player)
+            return
+        if self.status != "Waiting for Czar vote":
+            self.message("We're not ready for you to vote.", player)
+            return
+        if vote <= 0 or vote > len(self.players)-1:
+            self.message("%d isn't a valid vote selection." % vote, player)
+            return
+        winning_player = self.submissions.keys()[vote-1]
+        self.message("%s won this round! The winning combination was..." % winning_player.name)
+        if "_" not in self.current_card.body:
+            self.message(self.current_card.body)
+            self.message("%s" % self.submissions.values()[vote-1][0].body)
+        else:
+            replacements = []
+            filled_in = self.current_card.body.replace("_", "%s")
+            for i in range(self.cards_needed):
+                replacements.append("\x02\x1F%s\x0F" % self.submissions.values()[vote-1][i].body)
+            filled_in = filled_in % tuple(replacements)
+            self.message(filled_in)
+        self.start()
+
     #deal cards to player until hand size is 10
     def deal(self, player):
         handSize = len(player.hand)
@@ -135,7 +162,7 @@ class CAHGame(object):
 
     def message(self, body, player=None):
         if player is not None:
-            self.server.privmsg(player.name, body)
+            self.server.notice(player.name, body)
         else:
             self.server.privmsg(self.channel, body)
 

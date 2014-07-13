@@ -19,7 +19,7 @@ class cah(Module):
 
         self.game = None
 
-        scrap.register_event("cah", "msg", self.distribute)
+        scrap.register_event("cah", "pubmsg", self.distribute)
         # but how do you handle commands for privmsg?
         self.register_cmd("cah", self.cah)
         self.register_cmd("cah-init", self.cah_init)
@@ -41,49 +41,33 @@ class cah(Module):
         if len(event.tokens) >= 2:
             arg = event.arg[0]
             msg = event.arg[1:]
-            if event.type == "pubmsg":
-                if arg == "start":
-                    self.cah_start(server, event, bot)
-                    return
+            if arg == "start":
+                self.cah_start(server, event, bot)
 
-                elif arg == "new":
-                    self.cah_new(server, event, bot)
-                    return
+            elif arg == "new":
+                self.cah_new(server, event, bot)
 
-                elif arg == "join":
-                    self.cah_join(server, event, bot)
-                    return
+            elif arg == "join":
+                self.cah_join(server, event, bot)
 
-                elif arg == "end":
-                    self.cah_end(server, event, bot)
-                    return
+            elif arg == "end":
+                self.cah_end(server, event, bot)
 
-            elif event.type == "privmsg":
-                if arg == "select":
-                    if len(msg) >= 1:
-                        cards = msg[0:]
-                        self.cah_select(server, event, bot, cards)
-                    else:
-                        usage = "Select card usage"
-                        server.privmsg(event.target, usage)
-                    return
+            elif arg == "select":
+                if len(msg) >= 1:
+                    cards = msg[0:]
+                    self.cah_select(server, event, bot, cards)
 
-            if arg == "add":
+            elif arg == "add":
                 if len(msg) >= 2:
                     color = msg[0]
                     body = ' '.join(msg[1:])
                     self.cah_add(server, event, bot, color, body)
-                else:
-                    usage = "Add card usage"
-                    server.privmsg(event.target, usage)
 
             elif arg == "vote":
                 if len(msg) == 1:
                     #going to need some args here
                     self.cah_vote(server, event, bot, msg[0])
-                else:
-                    usage = "Vote usage"
-                    server.privmsg(event.target, usage)
 
             elif arg == "draw":
                 color = msg[0]
@@ -141,8 +125,7 @@ class cah(Module):
     def cah_add(self, server, event, bot, color, body):
         '''Add a card to the database.'''
         add_card(color, body)
-        replyto = event.target if event.type == "pubmsg" else event.source.nick
-        server.privmsg(replyto, "Added %s card: %s" % (color, body))
+        server.privmsg(event.target, "Added %s card: %s" % (color, body))
 
     #PRIVMSG
     def cah_select(self, server, event, bot, cards):
@@ -152,32 +135,36 @@ class cah(Module):
             try:
                 sanitized_cards.append(int(card))
             except ValueError:
-                server.privmsg(event.source.nick, "'%s' is not a valid card." % card)
+                server.notice(event.source.nick, "'%s' is not a valid card." % card)
                 return
 
         player = self.game.get_player(event.source.nick)
         self.game.select(player, sanitized_cards)
 
     #PUBMSG or PRIVMSG
-    def cah_vote(self, server, event, bot, voted):
+    def cah_vote(self, server, event, bot, vote):
         '''Czar voting for group #.'''
-        replyto = event.target if event.type == "pubmsg" else event.source.nick
-        server.privmsg(replyto, "PLACEHOLDER: czar is voting for %s" % voted)
+        try:
+            vote = int(vote)
+        except ValueError:
+            server.notice(event.source.nick, "'%s' is not a valid choice." % vote)
+            return
+
+        player = self.game.get_player(event.source.nick)
+        self.game.vote(player, vote)
 
     #PUBMSG or PRIVMSG
     def cah_init(self, server, event, bot):
-        replyto = event.target if event.type == "pubmsg" else event.source.nick
-        server.privmsg(replyto, "Adding cards to DB")
+        server.privmsg(event.target, "Adding cards to DB")
         init_result = init_db()
-        server.privmsg(replyto, init_result)
+        server.privmsg(event.target, init_result)
 
     #PUBMSG or PRIVMSG
     def cah_draw(self, server, event, bot, color):
         '''For testing only, delete later.'''
         d = Deck()
         c = d.draw(color)
-        replyto = event.target if event.type == "pubmsg" else event.source.nick
-        server.privmsg(replyto, c.body)
+        server.privmsg(event.target, c.body)
 
     #PUBMSG or PRIVMSG
     def cah_madlib(self, server, event, bot):
@@ -195,5 +182,4 @@ class cah(Module):
                 replacements.append("\x02\x1F%s\x0F" % d.draw("white").body.rstrip('.'))
             madlib = madlib % tuple(replacements)
 
-        replyto = event.target if event.type == "pubmsg" else event.source.nick
-        server.privmsg(replyto, madlib)
+        server.privmsg(event.target, madlib)
