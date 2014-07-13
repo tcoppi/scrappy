@@ -61,40 +61,59 @@ class CAHGame(object):
         # Reset back to the start
         self.status = "Waiting for player selection"
         self.submissions = {}
+
+        # Refresh player hands
         for player in self.players:
             self.deal(player)
+
+        # Deal the new black card
         new_card = self.deal_black()
         if new_card is None:
             self.message("Out of black cards! You played a long game!")
-            #self.end()
+            #self.end() # TODO: make this end the game when out of black cards
             return
+
         czar = self.choose_czar()
         self.message("The new czar is %s" % czar.name)
         self.message("%s has drawn: %s" % (czar.name, self.current_card.body))
+
+        # Show players their current hand
         for player in [player for player in self.players if player.name != czar.name]:
             self.message("You will need to choose \x02%d\x0F cards with the 'select X' command, where X is the card's position in your hand." % self.cards_needed, player)
             if self.cards_needed > 1:
                 self.message("NOTE: To submit multiple cards, use the cah command 'select X Y ...', where the card numbers are separated by a space.", player)
+            # Display hand
             self.message("Ok, here's your hand:", player)
             for num, card in enumerate(player.hand):
                 self.message("%d. %s" % (num+1, card.body), player)
 
     # Choose cards to play
     def select(self, player, cards):
+        # Fail if the player is the Czar OR it's not time for players to select cards
         if self.status != "Waiting for player selection" or self.players[self.current_czar].name == player.name:
             self.message("This isn't your turn!", player)
             return
+
+        # Fail if player didn't select the right amount of cards
         if len(cards) != self.cards_needed:
             self.message("You need to play %d cards _only_" % self.cards_needed, player)
             return
+
+        # Fail if cards are invalid (they should have been sanitized to ints in cah.py)
         for card in cards:
             if card > len(player.hand) or card <= 0:
                 self.message("You don't have a card %d in your hand!" % card, player)
                 return
+
+        # Insert cards into the submissions dictionary
         self.submissions[player] = [player.hand[card-1] for card in cards]
+
+        # Sort cards and pop them in reverse order (so the index of the next card to be popped stays the same throughout the loop)
         removed_cards = sorted(cards, reverse=True)
         for card in removed_cards:
             player.hand.pop(card-1)
+
+        # Continue on in the game loop if all but the czar have voted
         if len(self.submissions) == len(self.players)-1:
             self.display_selections()
             self.status = "Waiting for Czar vote"
@@ -102,10 +121,12 @@ class CAHGame(object):
     # Present the funnies
     def display_selections(self):
         self.message("Results are in!")
+        # Question cards are only displayed once, then the replies are presented as choices
         if "_" not in self.current_card.body:
             self.message(self.current_card.body)
             for num, submission in enumerate(self.submissions.values()):
                 self.message("%d. %s" % (num+1, submission[0].body))
+        # Other cards have the white card answeres filled in the blanks (with bold and underline)
         else:
             for num, submission in enumerate(self.submissions.values()):
                 replacements = []
@@ -114,21 +135,35 @@ class CAHGame(object):
                     replacements.append("\x02\x1F%s\x0F" % submission[i].body)
                 filled_in = filled_in % tuple(replacements)
                 self.message("%d. %s" % (num+1, filled_in))
-        self.message("Now for %s to vote...." % self.players[self.current_czar].name)
 
+        # Prompt the czar to not be lazy...
+        self.message("Now for %s to vote..." % self.players[self.current_czar].name)
+
+    # Czar vote
     def vote(self, player, vote):
+        # Fail if the player isn't the current Czar
         if player.name != self.players[self.current_czar].name:
             self.message("You are not the Czar!", player)
             return
+
+        # Fail if it's not time for the Czar to vote
         if self.status != "Waiting for Czar vote":
             self.message("We're not ready for you to vote.", player)
             return
+
+        # Fail if the czar vote for a choice that isn't present
         if vote <= 0 or vote > len(self.players)-1:
             self.message("%d isn't a valid vote selection." % vote, player)
             return
+
+        # Display and increase score for the Czar's choice
         winning_player = self.submissions.keys()[vote-1]
         self.message("%s won this round! The winning combination was..." % winning_player.name)
+
         winning_player.score += 1
+
+        # TODO: refactor this and the bit in display_selections
+        # see display_selections, this is the same, except it only displays a single submission
         if "_" not in self.current_card.body:
             self.message(self.current_card.body)
             self.message("%s" % self.submissions.values()[vote-1][0].body)
@@ -139,6 +174,8 @@ class CAHGame(object):
                 replacements.append("\x02\x1F%s\x0F" % self.submissions.values()[vote-1][i].body)
             filled_in = filled_in % tuple(replacements)
             self.message(filled_in)
+
+        # And start the game loop over
         self.start()
 
     #deal cards to player until hand size is 10
