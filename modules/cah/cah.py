@@ -183,7 +183,7 @@ class cah(Module):
             madlib += ' ' + ', '.join([d.draw("white").body.rstrip('.') for x in range(blanks)])
         else:
             replacements = []
-            madlib = madlib.replace("_", "%s")
+            madlib = madlib.replace("%","%%").replace("_", "%s")
             for i in range(blanks):
                 replacements.append("\x02\x1F%s\x0F" % d.draw("white").body.rstrip('.'))
             madlib = madlib % tuple(replacements)
