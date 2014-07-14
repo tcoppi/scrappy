@@ -130,7 +130,7 @@ class CAHGame(object):
         else:
             for num, submission in enumerate(self.submissions.values()):
                 replacements = []
-                filled_in = self.current_card.body.replace("_", "%s")
+                filled_in = self.current_card.body.replace("%","%%").replace("_", "%s")
                 for i in range(self.cards_needed):
                     replacements.append("\x02\x1F%s\x0F" % submission[i].body)
                 filled_in = filled_in % tuple(replacements)
@@ -169,7 +169,7 @@ class CAHGame(object):
             self.message(', '.join([x.body for x in self.submissions.values()[vote-1]]))
         else:
             replacements = []
-            filled_in = self.current_card.body.replace("_", "%s")
+            filled_in = self.current_card.body.replace("%","%%").replace("_", "%s")
             for i in range(self.cards_needed):
                 replacements.append("\x02\x1F%s\x0F" % self.submissions.values()[vote-1][i].body)
             filled_in = filled_in % tuple(replacements)
