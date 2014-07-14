@@ -2,10 +2,12 @@ import peewee
 # needed for init
 import json
 import urllib2
+import HTMLParser
 
 from module import DBModel
 
 JSON_LOCATION = "https://raw.githubusercontent.com/samurailink3/hangouts-against-humanity/master/source/data/cards.js"
+
 
 class Cards(DBModel):
     color = peewee.TextField()
@@ -19,6 +21,7 @@ class NoMoreCards(Exception):
 class Deck(object):
     def __init__(self):
         self.shuffle()
+        self.htmlParser = HTMLParser.HTMLParser()
 
     def shuffle(self):
         Cards.update(drawn=False).execute()
@@ -29,6 +32,8 @@ class Deck(object):
         except Cards.DoesNotExist as e:
             raise NoMoreCards('No more %s cards' % color)
         card.update(drawn=True).where(Cards.id == card.id).execute()
+        
+        card.body = self.htmlParser.unescape(card.body)
         return card
 
     def count(self, color):
