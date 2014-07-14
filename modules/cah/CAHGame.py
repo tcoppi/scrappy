@@ -125,7 +125,7 @@ class CAHGame(object):
         if "_" not in self.current_card.body:
             self.message(self.current_card.body)
             for num, submission in enumerate(self.submissions.values()):
-                self.message("%d. %s" % (num+1, submission[0].body))
+                self.message("%d. %s" % (num+1, ', '.join([x.body for x in submission])))
         # Other cards have the white card answeres filled in the blanks (with bold and underline)
         else:
             for num, submission in enumerate(self.submissions.values()):
@@ -166,7 +166,7 @@ class CAHGame(object):
         # see display_selections, this is the same, except it only displays a single submission
         if "_" not in self.current_card.body:
             self.message(self.current_card.body)
-            self.message("%s" % self.submissions.values()[vote-1][0].body)
+            self.message(', '.join([x.body for x in self.submissions.values()[vote-1]]))
         else:
             replacements = []
             filled_in = self.current_card.body.replace("_", "%s")
@@ -181,11 +181,11 @@ class CAHGame(object):
     #deal cards to player until hand size is 10
     def deal(self, player):
         handSize = len(player.hand)
-        
+
         while handSize < 10:
             player.hand.append(self.deck.draw("white"))
             handSize += 1
-           
+
         return player.hand
 
     def choose_czar(self):
