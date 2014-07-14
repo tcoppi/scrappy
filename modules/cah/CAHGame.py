@@ -207,10 +207,7 @@ class CAHGame(object):
 
     @property
     def cards_needed(self):
-        if "_" not in self.current_card.body:
-            return 1
-        else:
-            return self.current_card.body.count("_")
+        return self.current_card.num_answers
 
 #Utility class to manage Players
 class Player(object):

@@ -11,6 +11,7 @@ class Cards(DBModel):
     color = peewee.TextField()
     body = peewee.TextField()
     drawn = peewee.BooleanField(default=False)
+    num_answers = peewee.IntegerField()
 
 class NoMoreCards(Exception):
     pass
@@ -44,10 +45,10 @@ def init_db():
         cards = json.loads(card_json)
     except ValueError:
         return "Couldn't parse cards JSON."
-    massaged_dicts = [{'color':'white' if card["cardType"]=='A' else 'black', 'body':card["text"]} for card in cards]
+    massaged_dicts = [{'color':'white' if card["cardType"]=='A' else 'black', 'body':card["text"], 'num_answers':int(card["numAnswers"])} for card in cards]
     for card in massaged_dicts:
-        add_card(card["color"], card["body"])
+        add_card(card["color"], card["body"], card["num_answers"])
     return "Successfully grabbed cards."
 
-def add_card(color, body):
-    Cards.insert(color=color, body=body).execute()
+def add_card(color, body, num_answers):
+    Cards.insert(color=color, body=body, num_answers=num_answers).execute()
