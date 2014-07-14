@@ -176,9 +176,11 @@ class cah(Module):
         d = Deck()
         b = d.draw("black")
         madlib = b.body
-        blanks = madlib.count('_')
+        blanks = b.num_answers
         if blanks == 0:
             madlib += ' ' + d.draw("white").body.rstrip('.')
+        elif madlib.count('_') == 0:
+            madlib += ' ' + ', '.join([d.draw("white").body.rstrip('.') for x in range(blanks)])
         else:
             replacements = []
             madlib = madlib.replace("_", "%s")
