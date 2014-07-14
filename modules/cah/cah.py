@@ -124,8 +124,12 @@ class cah(Module):
     #PUBMSG or PRIVMSG
     def cah_add(self, server, event, bot, color, body):
         '''Add a card to the database.'''
-        add_card(color, body)
-        server.privmsg(event.target, "Added %s card: %s" % (color, body))
+        if "_" not in body:
+            num_answers = 1
+        else:
+            num_answers = body.count("_")
+        add_card(color, body, num_answers)
+        server.privmsg(event.target, "Added %s card: %s (%s answers)" % (color, body, num_answers))
 
     #PRIVMSG
     def cah_select(self, server, event, bot, cards):
