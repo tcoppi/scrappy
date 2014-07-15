@@ -25,7 +25,7 @@ class auth(Module):
             server.privmsg(event.target, "Doin it wrong!")
 
     def is_auth(self, server, event, bot):
-        if user.is_authenticated(event.source, server["servername"]):
+        if user.is_authenticated(event.source, server.server_name):
             server.privmsg(event.target, "Yes, you're authenticated")
         else:
             server.privmsg(event.target, "No, you're not authenticated")
