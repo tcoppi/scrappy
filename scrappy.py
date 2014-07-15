@@ -129,6 +129,13 @@ class ServerState(ircclient.ServerConnection):
 
         #self.channels = [Channel(x) for x in config["channels"].split()]
 
+    # Reply to a PRIVMSG event
+    def reply(self, event, message):
+        if event.type == "privmsg":
+            self.privmsg(event.source.nick, message)
+        elif event.type == "pubmsg":
+            self.privmsg(event.target, message)
+
     def join_defaults(self, server, event, bot):
         if server == self:
             for channel in self.initial_channels:
