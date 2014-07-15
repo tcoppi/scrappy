@@ -882,7 +882,8 @@ class ServerConnection(Connection):
     def notice(self, target, text):
         """Send a NOTICE command."""
         # Should limit len(text) here!
-        self.send_raw("NOTICE %s :%s" % (target, text))
+        for part in text.split("\n"):
+            self.send_raw("NOTICE %s :%s" % (target, part))
 
     def oper(self, nick, password):
         """Send an OPER command."""
@@ -912,7 +913,8 @@ class ServerConnection(Connection):
 
     def privmsg(self, target, text):
         """Send a PRIVMSG command."""
-        self.send_raw("PRIVMSG %s :%s" % (target, text))
+        for part in text.split("\n"):
+            self.send_raw("PRIVMSG %s :%s" % (target, part))
 
     def privmsg_many(self, targets, text):
         """Send a PRIVMSG command to multiple targets."""
