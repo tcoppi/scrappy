@@ -3,4 +3,6 @@
 .scrappyrc
 *.db
 .idea
+insultdb
 peewee.py
+six.py
