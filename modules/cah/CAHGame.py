@@ -62,7 +62,7 @@ class CAHGame(object):
         self.status = "Waiting for player selection"
 
         # Remove previous submissions from players' hands
-        for player, submissions in self.submissions:
+        for player, submissions in self.submissions.iteritems():
             for card in submissions:
                 if card in player.hand: player.hand.remove(card)
 
