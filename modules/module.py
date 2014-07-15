@@ -30,7 +30,7 @@ class Module(object):
             callback_list = self.command_callbacks[command]
             for callback in callback_list:
                 doc = callback.__doc__
-                doc = "%s%s\n%s" % (server["cmdchar"], command, doc)
+                doc = "%s%s\n%s" % (server.cmdchar, command, doc)
                 docstrings.add(doc)
         return docstrings
 
