@@ -31,7 +31,17 @@ class Module(object):
             for callback in callback_list:
                 doc = callback.__doc__
                 doc = "%s%s\n%s" % (server.cmdchar, command, doc)
-                docstrings.add(doc)
+                extended_help = None
+                try:
+                    extended_help = getattr(self, "help_"+command)
+                except AttributeError:
+                    continue
+                if extended_help is None:
+                    docstrings.add(doc)
+                else:
+                    # Add extra help for the command if necessary
+                    docstrings.add("%s\n%s" % (doc, extended_help()))
+
         return docstrings
 
     def distribute(self, server, event, bot):
