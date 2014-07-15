@@ -1,4 +1,4 @@
-#! -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 # Copyright (C) 1999-2002  Joel Rosdahl
 # Portions Copyright © 2011-2012 Jason R. Coombs
@@ -153,21 +153,32 @@ class SingleServerIRCBot(irc.client.SimpleIRCClient):
             pass
 
     def _on_namreply(self, c, e):
-        # e.arguments[0] == "@" for secret channels,
-        #                     "*" for private channels,
-        #                     "=" for others (public channels)
-        # e.arguments[1] == channel
-        # e.arguments[2] == nick list
+        """
+        e.arguments[0] == "@" for secret channels,
+                          "*" for private channels,
+                          "=" for others (public channels)
+        e.arguments[1] == channel
+        e.arguments[2] == nick list
+        """
 
-        ch = e.arguments[1]
-        for nick in e.arguments[2].split():
-            if nick[0] == "@":
+        ch_type, channel, nick_list = e.arguments
+
+        if channel == '*':
+            # User is not in any visible channel
+            # http://tools.ietf.org/html/rfc2812#section-3.2.5
+            return
+
+        for nick in nick_list.split():
+            nick_modes = []
+
+            if nick[0] in self.connection.features.prefix:
+                nick_modes.append(self.connection.features.prefix[nick[0]])
                 nick = nick[1:]
-                self.channels[ch].set_mode("o", nick)
-            elif nick[0] == "+":
-                nick = nick[1:]
-                self.channels[ch].set_mode("v", nick)
-            self.channels[ch].add_user(nick)
+
+            for mode in nick_modes:
+                self.channels[channel].set_mode(mode, nick)
+
+            self.channels[channel].add_user(nick)
 
     def _on_nick(self, c, e):
         before = e.source.nick
@@ -218,8 +229,8 @@ class SingleServerIRCBot(irc.client.SimpleIRCClient):
 
         Used when answering a CTCP VERSION request.
         """
-        version='.'.join(irc.client.VERSION) or 'unknown'
-        return "Python irc.bot ({version})".format(version=version)
+        return "Python irc.bot ({version})".format(
+            version=irc.client.VERSION_STRING)
 
     def jump_server(self, msg="Changing servers"):
         """Connect to a new server, possibly disconnecting from the current.
@@ -258,15 +269,16 @@ class SingleServerIRCBot(irc.client.SimpleIRCClient):
 
 
 class Channel(object):
-    """A class for keeping information about an IRC channel.
-
-    This class can be improved a lot.
+    """
+    A class for keeping information about an IRC channel.
     """
 
     def __init__(self):
         self.userdict = IRCDict()
         self.operdict = IRCDict()
         self.voiceddict = IRCDict()
+        self.ownerdict = IRCDict()
+        self.halfopdict = IRCDict()
         self.modes = {}
 
     def users(self):
@@ -282,6 +294,14 @@ class Channel(object):
         mode set in the channel."""
         return self.voiceddict.keys()
 
+    def owners(self):
+        """Returns an unsorted list of the channel's owners."""
+        return self.ownerdict.keys()
+
+    def halfops(self):
+        """Returns an unsorted list of the channel's half-operators."""
+        return self.halfopdict.keys()
+
     def has_user(self, nick):
         """Check whether the channel has a user."""
         return nick in self.userdict
@@ -293,6 +313,14 @@ class Channel(object):
     def is_voiced(self, nick):
         """Check whether a user has voice mode set in the channel."""
         return nick in self.voiceddict
+
+    def is_owner(self, nick):
+        """Check whether a user has owner status in the channel."""
+        return nick in self.ownerdict
+
+    def is_halfop(self, nick):
+        """Check whether a user has half-operator status in the channel."""
+        return nick in self.halfopdict
 
     def add_user(self, nick):
         self.userdict[nick] = 1
@@ -326,6 +354,10 @@ class Channel(object):
             self.operdict[value] = 1
         elif mode == "v":
             self.voiceddict[value] = 1
+        elif mode == "q":
+            self.ownerdict[value] = 1
+        elif mode == "h":
+            self.halfopdict[value] = 1
         else:
             self.modes[mode] = value
 
@@ -343,6 +375,10 @@ class Channel(object):
                 del self.operdict[value]
             elif mode == "v":
                 del self.voiceddict[value]
+            elif mode == "q":
+                del self.ownerdict[value]
+            elif mode == "h":
+                del self.halfopdict[value]
             else:
                 del self.modes[mode]
         except KeyError:

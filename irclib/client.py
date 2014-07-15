@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (C) 1999-2002  Joel Rosdahl
-# Copyright © 2011-2012 Jason R. Coombs
+# Copyright © 2011-2013 Jason R. Coombs
 
 """
 Internet Relay Chat (IRC) protocol client library.
@@ -47,7 +47,7 @@ Current limitations:
 .. [IRC specifications] http://www.irchelp.org/irchelp/rfc/
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 
 import bisect
 import re
@@ -57,11 +57,13 @@ import string
 import time
 import struct
 import logging
-import itertools
 import threading
 import abc
 import collections
 import functools
+import itertools
+
+import six
 
 try:
     import pkg_resources
@@ -75,14 +77,40 @@ from . import strings
 from . import util
 from . import buffer
 from . import schedule
+from . import features
 
 log = logging.getLogger(__name__)
 
+def always_iterable(item):
+	"""
+	Given an object, always return an iterable. If the item is not
+	already iterable, return a tuple containing only the item. If item is
+	None, an empty iterable is returned.
+
+	>>> always_iterable([1,2,3])
+	[1, 2, 3]
+	>>> always_iterable('foo')
+	('foo',)
+	>>> always_iterable(None)
+	()
+	>>> always_iterable(range(10))
+	range(0, 10)
+	>>> def _test_func(): yield "I'm iterable"
+	>>> print(next(always_iterable(_test_func())))
+	I'm iterable
+	"""
+	if item is None:
+		item = ()
+	if isinstance(item, six.string_types) or not hasattr(item, '__iter__'):
+		item = item,
+	return item
+
 # set the version tuple
 try:
-    VERSION = tuple(int(res) for res in re.findall('\d+',
-        pkg_resources.require('irc')[0].version))
+    VERSION_STRING = pkg_resources.require('irc')[0].version
+    VERSION = tuple(int(res) for res in re.findall('\d+', VERSION_STRING))
 except Exception:
+    VERSION_STRING = 'unknown'
     VERSION = ()
 
 # TODO
@@ -108,11 +136,18 @@ class InvalidCharacters(ValueError):
 class MessageTooLong(ValueError):
     "Message is too long"
 
-PrioritizedHandler = collections.namedtuple('PrioritizedHandler',
-    ('priority', 'callback'))
+class PrioritizedHandler(
+        collections.namedtuple('Base', ('priority', 'callback'))):
+    def __lt__(self, other):
+        "when sorting prioritized handlers, only use the priority"
+        return self.priority < other.priority
 
 class IRC(object):
-    """Class that handles one or several IRC server connections.
+    """
+    Processes events from one or more IRC server connections.
+
+    Note: This class is poorly named. In the future, it will be renamed to
+    Manifold to better reflect its purpose.
 
     When an IRC object has been instantiated, it can be used to create
     Connection objects that represent the IRC connections.  The
@@ -138,8 +173,8 @@ class IRC(object):
     using the nickname my_nickname and send the message "Hi there!"
     to the nickname a_nickname.
 
-    The methods of this class are thread-safe; accesses to and modifications of
-    its internal lists of connections, handlers, and delayed commands
+    The methods of this class are thread-safe; accesses to and modifications
+    of its internal lists of connections, handlers, and delayed commands
     are guarded by a mutex.
     """
 
@@ -187,6 +222,7 @@ class IRC(object):
         with self.mutex:
             self.connections.append(connection)
 
+
     def server(self):
         """Creates and returns a ServerConnection object."""
 
@@ -225,6 +261,16 @@ class IRC(object):
                     self._schedule_command(command.next())
                 del self.delayed_commands[0]
 
+    @property
+    def sockets(self):
+        with self.mutex:
+            return [
+                conn.socket
+                for conn in self.connections
+                if conn is not None
+                and conn.socket is not None
+            ]
+
     def process_once(self, timeout=0):
         """Process data from connections once.
 
@@ -237,16 +283,14 @@ class IRC(object):
         incoming data, if there are any.  If that seems boring, look
         at the process_forever method.
         """
-        with self.mutex:
-            log.log(logging.DEBUG-2, "process_once()")
-            sockets = [x.socket for x in self.connections if x is not None]
-            sockets = [x for x in sockets if x is not None]
-            if sockets:
-                (i, o, e) = select.select(sockets, [], [], timeout)
-                self.process_data(i)
-            else:
-                time.sleep(timeout)
-            self.process_timeout()
+        log.log(logging.DEBUG-2, "process_once()")
+        sockets = self.sockets
+        if sockets:
+            (i, o, e) = select.select(sockets, [], [], timeout)
+            self.process_data(i)
+        else:
+            time.sleep(timeout)
+        self.process_timeout()
 
     def process_forever(self, timeout=0.2):
         """Run an infinite loop, processing data from connections.
@@ -392,7 +436,11 @@ class IRC(object):
             self.connections.remove(connection)
             self._on_disconnect(connection.socket)
 
-_rfc_1459_command_regexp = re.compile("^(:(?P<prefix>[^ ]+) +)?(?P<command>[^ ]+)( *(?P<argument> .+))?")
+# for future compatibility
+Manifold = IRC
+
+_rfc_1459_command_regexp = re.compile(
+    "^(:(?P<prefix>[^ ]+) +)?(?P<command>[^ ]+)( *(?P<argument> .+))?")
 
 class Connection(object):
     """
@@ -440,6 +488,7 @@ class ServerConnection(Connection):
     def __init__(self, irclibobj):
         super(ServerConnection, self).__init__(irclibobj)
         self.connected = False
+        self.features = features.FeatureSet()
 
     # save the method args to allow for easier reconnection.
     @irc_functools.save_method_args
@@ -483,8 +532,8 @@ class ServerConnection(Connection):
         self.connect_factory = connect_factory
         try:
             self.socket = self.connect_factory(self.server_address)
-        except socket.error as err:
-            raise ServerConnectionError("Couldn't connect to socket: %s" % err)
+        except socket.error as ex:
+            raise ServerConnectionError("Couldn't connect to socket: %s" % ex)
         self.connected = True
         self.irclibobj._on_connect(self.socket)
 
@@ -551,94 +600,101 @@ class ServerConnection(Connection):
 
         self.buffer.feed(new_data)
 
+        # process each non-empty line after logging all lines
         for line in self.buffer:
             log.debug("FROM SERVER: %s", line)
+            if not line: continue
+            self._process_line(line)
 
-            if not line:
-                continue
+    def _process_line(self, line):
+        source = None
+        command = None
+        arguments = None
+        event = Event("all_raw_messages", self.get_server_name(), None,
+            [line])
+        self._handle_event(event)
 
-            prefix = None
-            command = None
-            arguments = None
-            self._handle_event(Event("all_raw_messages",
-                                     self.get_server_name(),
-                                     None,
-                                     [line]))
+        m = _rfc_1459_command_regexp.match(line)
+        if m.group("prefix"):
+            prefix = m.group("prefix")
+            if not self.real_server_name:
+                self.real_server_name = prefix
+            source = NickMask(prefix)
 
-            m = _rfc_1459_command_regexp.match(line)
-            if m.group("prefix"):
-                prefix = m.group("prefix")
-                if not self.real_server_name:
-                    self.real_server_name = prefix
+        if m.group("command"):
+            command = m.group("command").lower()
 
-            if m.group("command"):
-                command = m.group("command").lower()
+        if m.group("argument"):
+            a = m.group("argument").split(" :", 1)
+            arguments = a[0].split()
+            if len(a) == 2:
+                arguments.append(a[1])
 
-            if m.group("argument"):
-                a = m.group("argument").split(" :", 1)
-                arguments = a[0].split()
-                if len(a) == 2:
-                    arguments.append(a[1])
+        # Translate numerics into more readable strings.
+        command = events.numeric.get(command, command)
 
-            # Translate numerics into more readable strings.
-            command = events.numeric.get(command, command)
-
-            if command == "nick":
-                if NickMask(prefix).nick == self.real_nickname:
-                    self.real_nickname = arguments[0]
-            elif command == "welcome":
-                # Record the nickname in case the client changed nick
-                # in a nicknameinuse callback.
+        if command == "nick":
+            if source.nick == self.real_nickname:
                 self.real_nickname = arguments[0]
+        elif command == "welcome":
+            # Record the nickname in case the client changed nick
+            # in a nicknameinuse callback.
+            self.real_nickname = arguments[0]
+        elif command == "featurelist":
+            self.features.load(arguments)
 
-            if command in ["privmsg", "notice"]:
-                target, message = arguments[0], arguments[1]
-                messages = _ctcp_dequote(message)
+        if command in ["privmsg", "notice"]:
+            target, message = arguments[0], arguments[1]
+            messages = _ctcp_dequote(message)
 
-                if command == "privmsg":
-                    if is_channel(target):
-                        command = "pubmsg"
-                else:
-                    if is_channel(target):
-                        command = "pubnotice"
-                    else:
-                        command = "privnotice"
-
-                for m in messages:
-                    if isinstance(m, tuple):
-                        if command in ["privmsg", "pubmsg"]:
-                            command = "ctcp"
-                        else:
-                            command = "ctcpreply"
-
-                        m = list(m)
-                        log.debug("command: %s, source: %s, target: %s, "
-                            "arguments: %s", command, prefix, target, m)
-                        self._handle_event(Event(command, NickMask(prefix), target, m))
-                        if command == "ctcp" and m[0] == "ACTION":
-                            self._handle_event(Event("action", prefix, target, m[1:]))
-                    else:
-                        log.debug("command: %s, source: %s, target: %s, "
-                            "arguments: %s", command, prefix, target, [m])
-                        self._handle_event(Event(command, NickMask(prefix), target, [m]))
+            if command == "privmsg":
+                if is_channel(target):
+                    command = "pubmsg"
             else:
-                target = None
-
-                if command == "quit":
-                    arguments = [arguments[0]]
-                elif command == "ping":
-                    target = arguments[0]
+                if is_channel(target):
+                    command = "pubnotice"
                 else:
-                    target = arguments[0]
-                    arguments = arguments[1:]
+                    command = "privnotice"
 
-                if command == "mode":
-                    if not is_channel(target):
-                        command = "umode"
+            for m in messages:
+                if isinstance(m, tuple):
+                    if command in ["privmsg", "pubmsg"]:
+                        command = "ctcp"
+                    else:
+                        command = "ctcpreply"
 
-                log.debug("command: %s, source: %s, target: %s, "
-                    "arguments: %s", command, prefix, target, arguments)
-                self._handle_event(Event(command, NickMask(prefix), target, arguments))
+                    m = list(m)
+                    log.debug("command: %s, source: %s, target: %s, "
+                        "arguments: %s", command, source, target, m)
+                    event = Event(command, source, target, m)
+                    self._handle_event(event)
+                    if command == "ctcp" and m[0] == "ACTION":
+                        event = Event("action", source, target, m[1:])
+                        self._handle_event(event)
+                else:
+                    log.debug("command: %s, source: %s, target: %s, "
+                        "arguments: %s", command, source, target, [m])
+                    event = Event(command, source, target, [m])
+                    self._handle_event(event)
+        else:
+            target = None
+
+            if command == "quit":
+                arguments = [arguments[0]]
+            elif command == "ping":
+                target = arguments[0]
+            else:
+                target = arguments[0]
+                arguments = arguments[1:]
+
+            if command == "mode":
+                if not is_channel(target):
+                    command = "umode"
+
+            log.debug("command: %s, source: %s, target: %s, "
+                "arguments: %s", command, source, target, arguments)
+            event = Event(command, source, target, arguments)
+            self._handle_event(event)
 
     def _handle_event(self, event):
         """[Internal]"""
@@ -703,10 +759,10 @@ class ServerConnection(Connection):
                 If more than one capability is named, the RFC1459 designated
                 sentinel (:) for a multi-parameter argument must be present.
 
-            It's not obvious where the sentinel should be present or if it must
-            be omitted for a single parameter, so follow convention and only
-            include the sentinel prefixed to the first parameter if more than
-            one parameter is present.
+            It's not obvious where the sentinel should be present or if it
+            must be omitted for a single parameter, so follow convention and
+            only include the sentinel prefixed to the first parameter if more
+            than one parameter is present.
             """
             if len(args) > 1:
                 return (':' + args[0],) + args[1:]
@@ -718,7 +774,11 @@ class ServerConnection(Connection):
     def ctcp(self, ctcptype, target, parameter=""):
         """Send a CTCP command."""
         ctcptype = ctcptype.upper()
-        self.privmsg(target, "\001%s%s\001" % (ctcptype, parameter and (" " + parameter) or ""))
+        tmpl = (
+            "\001{ctcptype} {parameter}\001" if parameter else
+            "\001{ctcptype}\001"
+        )
+        self.privmsg(target, tmpl.format(**vars()))
 
     def ctcp_reply(self, target, parameter):
         """Send a CTCP REPLY command."""
@@ -773,7 +833,10 @@ class ServerConnection(Connection):
 
     def kick(self, channel, nick, comment=""):
         """Send a KICK command."""
-        self.send_raw("KICK %s %s%s" % (channel, nick, (comment and (" :" + comment))))
+        tmpl = "KICK {channel} {nick}"
+        if comment:
+            tmpl += " :{comment}"
+        self.send_raw(tmpl.format(**vars()))
 
     def links(self, remote_server="", server_mask=""):
         """Send a LINKS command."""
@@ -787,8 +850,9 @@ class ServerConnection(Connection):
     def list(self, channels=None, server=""):
         """Send a LIST command."""
         command = "LIST"
+        channels = ",".join(always_iterable(channels))
         if channels:
-            command = command + " " + ",".join(channels)
+            command += ' ' + channels
         if server:
             command = command + " " + server
         self.send_raw(command)
@@ -807,7 +871,9 @@ class ServerConnection(Connection):
 
     def names(self, channels=None):
         """Send a NAMES command."""
-        self.send_raw("NAMES" + (channels and (" " + ",".join(channels)) or ""))
+        tmpl = "NAMES {channels}" if channels else "NAMES"
+        channels = ','.join(always_iterable(channels))
+        self.send_raw(tmpl.format(channels=channels))
 
     def nick(self, newnick):
         """Send a NICK command."""
@@ -824,7 +890,7 @@ class ServerConnection(Connection):
 
     def part(self, channels, message=""):
         """Send a PART command."""
-        channels = util.always_iterable(channels)
+        channels = always_iterable(channels)
         cmd_parts = [
             'PART',
             ','.join(channels),
@@ -942,12 +1008,51 @@ class ServerConnection(Connection):
                                          max and (" " + max),
                                          server and (" " + server)))
 
+    def set_rate_limit(self, frequency):
+        """
+        Set a `frequency` limit (messages per second) for this connection.
+        Any attempts to send faster than this rate will block.
+        """
+        self.send_raw = Throttler(self.send_raw, frequency)
+
+    def set_keepalive(self, interval):
+        """
+        Set a keepalive to occur every ``interval`` on this connection.
+        """
+        pinger = functools.partial(self.ping, 'keep-alive')
+        self.irclibobj.execute_every(period=interval, function=pinger)
+
+
+class Throttler(object):
+    """
+    Rate-limit a function (or other callable)
+    """
+    def __init__(self, func, max_rate=float('Inf')):
+        if isinstance(func, Throttler):
+            func = func.func
+        self.func = func
+        self.max_rate = max_rate
+        self.reset()
+
+    def reset(self):
+        self.last_called = 0
+
+    def __call__(self, *args, **kwargs):
+        # ensure at least 1/max_rate seconds from last call
+        elapsed = time.time() - self.last_called
+        must_wait = 1 / self.max_rate - elapsed
+        time.sleep(max(0, must_wait))
+        self.last_called = time.time()
+        return self.func(*args, **kwargs)
+
+
 class DCCConnectionError(IRCError):
     pass
 
 
 class DCCConnection(Connection):
-    """This class represents a DCC connection.
+    """
+    A DCC (Direct Client Connection).
 
     DCCConnection objects are instantiated by calling the dcc
     method on an IRC object.
@@ -1063,6 +1168,8 @@ class DCCConnection(Connection):
 
             if len(self.buffer) > 2 ** 14:
                 # Bad peer! Naughty peer!
+                log.info("Received >16k from a peer without a newline; "
+                    "disconnecting.")
                 self.disconnect()
                 return
         else:
@@ -1080,21 +1187,27 @@ class DCCConnection(Connection):
                 self,
                 Event(command, prefix, target, arguments))
 
-    def privmsg(self, string):
-        """Send data to DCC peer.
-
-        The string will be padded with appropriate LF if it's a DCC
-        CHAT session.
+    def privmsg(self, text):
         """
-        bytes = string.encode('utf-8')
+        Send text to DCC peer.
+
+        The text will be padded with a newline if it's a DCC CHAT session.
+        """
+        if self.dcctype == 'chat':
+            text += '\n'
+        bytes = text.encode('utf-8')
+        return self.send_bytes(bytes)
+
+    def send_bytes(self, bytes):
+        """
+        Send data to DCC peer.
+        """
         try:
             self.socket.send(bytes)
-            if self.dcctype == "chat":
-                self.socket.send("\n")
-            log.debug("TO PEER: %s\n", string)
+            log.debug("TO PEER: %r\n", bytes)
         except socket.error:
-            # Ouch!
             self.disconnect("Connection reset by peer.")
+
 
 class SimpleIRCClient(object):
     """A simple single-server IRC client class.
@@ -1111,18 +1224,25 @@ class SimpleIRCClient(object):
 
     Instance attributes that can be used by sub classes:
 
-        ircobj -- The IRC instance.
+        manifold -- The Manifold instance.
 
         connection -- The ServerConnection instance.
 
         dcc_connections -- A list of DCCConnection instances.
     """
+    manifold_class = Manifold
+
     def __init__(self):
-        self.ircobj = IRC()
-        self.connection = self.ircobj.server()
+        self.ircobj = self.manifold_class()
+        self.connection = self.manifold.server()
         self.dcc_connections = []
-        self.ircobj.add_global_handler("all_events", self._dispatcher, -10)
-        self.ircobj.add_global_handler("dcc_disconnect", self._dcc_disconnect, -10)
+        self.manifold.add_global_handler("all_events", self._dispatcher, -10)
+        self.manifold.add_global_handler("dcc_disconnect",
+            self._dcc_disconnect, -10)
+
+    @property
+    def manifold(self):
+        return self.ircobj
 
     def _dispatcher(self, connection, event):
         """
@@ -1152,7 +1272,7 @@ class SimpleIRCClient(object):
 
         Returns a DCCConnection instance.
         """
-        dcc = self.ircobj.dcc(dcctype)
+        dcc = self.manifold.dcc(dcctype)
         self.dcc_connections.append(dcc)
         dcc.connect(address, port)
         return dcc
@@ -1162,21 +1282,21 @@ class SimpleIRCClient(object):
 
         Returns a DCCConnection instance.
         """
-        dcc = self.ircobj.dcc(dcctype)
+        dcc = self.manifold.dcc(dcctype)
         self.dcc_connections.append(dcc)
         dcc.listen()
         return dcc
 
     def start(self):
         """Start the IRC client."""
-        self.ircobj.process_forever()
+        self.manifold.process_forever()
 
 
 class Event(object):
     "An IRC event."
     def __init__(self, type, source, target, arguments=None):
         """
-        Constructor of Event objects.
+        Initialize an Event.
 
         Arguments:
 
@@ -1314,9 +1434,29 @@ def ip_quad_to_numstr(quad):
     packed = struct.pack('BBBB', *bytes)
     return str(struct.unpack('>L', packed)[0])
 
-class NickMask(str):
+class NickMask(six.text_type):
     """
     A nickmask (the source of an Event)
+
+    >>> nm = NickMask('pinky!username@example.com')
+    >>> print(nm.nick)
+    pinky
+
+    >>> print(nm.host)
+    example.com
+
+    >>> print(nm.user)
+    username
+
+    >>> isinstance(nm, six.text_type)
+    True
+
+    >>> nm = 'красный!red@yahoo.ru'
+    >>> if not six.PY3: nm = nm.decode('utf-8')
+    >>> nm = NickMask(nm)
+
+    >>> isinstance(nm.nick, six.text_type)
+    True
     """
     @classmethod
     def from_params(cls, nick, user, host):
