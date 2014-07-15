@@ -3,3 +3,4 @@
 .scrappyrc
 *.db
 .idea
+peewee.py

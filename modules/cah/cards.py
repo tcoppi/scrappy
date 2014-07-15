@@ -5,6 +5,7 @@ import urllib2
 import HTMLParser
 
 from module import DBModel
+from random import shuffle
 
 JSON_LOCATION = "https://raw.githubusercontent.com/samurailink3/hangouts-against-humanity/master/source/data/cards.js"
 
@@ -23,21 +24,34 @@ class Deck(object):
         self.shuffle()
         self.htmlParser = HTMLParser.HTMLParser()
 
-    def shuffle(self):
-        Cards.update(drawn=False).execute()
+    def shuffle(self, reset_drawn=True):
+        self.reset(reset_drawn)
+        white_query = Cards.select().where(Cards.drawn==False, Cards.color=="white")
+        black_query = Cards.select().where(Cards.drawn==False, Cards.color=="black")
+        self.cards["white"] = [card for card in white_query]
+        self.cards["black"] = [card for card in black_query]
+        for key in self.cards:
+            shuffle(self.cards[key])
 
     def draw(self, color):
-        try:
-            card = Cards.select().where(Cards.color==color, Cards.drawn==False).order_by(peewee.fn.Random()).get()
-        except Cards.DoesNotExist as e:
+        if len(self.cards[color]) <= 0:
             raise NoMoreCards('No more %s cards' % color)
+
+        card = self.cards[color][0]
+        self.cards[color] = self.cards[color][1:]
+
         card.update(drawn=True).where(Cards.id == card.id).execute()
-        
+
         card.body = self.htmlParser.unescape(card.body)
         return card
 
     def count(self, color):
         return Cards.select().where(Cards.drawn==False, Cards.color==color).count()
+
+    def reset(self, reset_drawn=True):
+        if reset_drawn:
+            Cards.update(drawn=False).execute()
+        self.cards = {}
 
 
 def init_db():

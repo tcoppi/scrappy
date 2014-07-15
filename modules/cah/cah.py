@@ -112,14 +112,7 @@ class cah(Module):
     #PUBMSg
     def cah_end(self, server, event, bot):
         '''Abort the current game.'''
-        #check if game is already running
-        if self.game.running:
-            server.privmsg(event.target, "The game has ended.")
-            for place, player in enumerate(sorted(self.game.players, key=lambda x: x.score, reverse=True)):
-                server.privmsg(event.target, "%d. %s with %d points" % (place+1, player.name, player.score))
-            self.game.running = False
-        else:
-            server.privmsg(event.target, "There's no game running!  Use '@cah new' to start a new game.")
+        self.game.end()
 
     #PUBMSG or PRIVMSG
     def cah_add(self, server, event, bot, color, body):

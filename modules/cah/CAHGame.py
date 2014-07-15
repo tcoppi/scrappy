@@ -76,7 +76,7 @@ class CAHGame(object):
         new_card = self.deal_black()
         if new_card is None:
             self.message("Out of black cards! You played a long game!")
-            #self.end() # TODO: make this end the game when out of black cards
+            self.end() # TODO: make this end the game when out of black cards
             return
 
         czar = self.choose_czar()
@@ -92,6 +92,17 @@ class CAHGame(object):
             self.message("Ok, here's your hand:", player)
             for num, card in enumerate(player.hand):
                 self.message("%d. %s" % (num+1, card.body), player)
+
+    def end(self):
+        #check if game is already running
+        if self.running:
+            self.message("The game has ended.")
+            for place, player in enumerate(sorted(self.players, key=lambda x: x.score, reverse=True)):
+                self.message("%d. %s with %d points" % (place+1, player.name, player.score))
+            self.running = False
+            self.deck.reset()
+        else:
+            self.message("There's no game running!  Use '@cah new' to start a new game.")
 
     # Choose cards to play
     def select(self, player, cards):
