@@ -60,6 +60,12 @@ class CAHGame(object):
     def start(self):
         # Reset back to the start
         self.status = "Waiting for player selection"
+
+        # Remove previous submissions from players' hands
+        for player, submissions in self.submissions:
+            for card in submissions:
+                if card in player.hand: player.hand.remove(card)
+
         self.submissions = {}
 
         # Refresh player hands
@@ -107,11 +113,6 @@ class CAHGame(object):
 
         # Insert cards into the submissions dictionary
         self.submissions[player] = [player.hand[card-1] for card in cards]
-
-        # Sort cards and pop them in reverse order (so the index of the next card to be popped stays the same throughout the loop)
-        removed_cards = sorted(cards, reverse=True)
-        for card in removed_cards:
-            player.hand.pop(card-1)
 
         # Continue on in the game loop if all but the czar have voted
         if len(self.submissions) == len(self.players)-1:
