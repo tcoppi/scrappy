@@ -5,7 +5,7 @@ import sys
 
 from irclib import client as ircclient
 
-from module import Module
+from ..module import Module
 
 class core(Module):
     def __init__(self, scrap):

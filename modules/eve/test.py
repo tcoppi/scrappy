@@ -1,12 +1,12 @@
 from ..test_module import TestModule
 from mock import Mock, patch
 
-import gcalc
+import eve
 
-class TestGcalc(TestModule):
+class TestEve(TestModule):
     def setUp(self):
-        super(TestGcalc, self).setUp()
-        self.gcalc_obj = gcalc.gcalc(self.bot)
+        super(TestEve, self).setUp()
+        self.eve_obj = eve.eve(self.bot)
 
     def test_init(self):
         pass

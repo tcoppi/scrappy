@@ -1,7 +1,7 @@
 import json
 import urllib2
 
-from module import Module
+from ..module import Module
 
 #TODO: This could get pretty spammy, need to be able to allow it per channel
 class quote(Module):

@@ -1,12 +1,12 @@
 from ..test_module import TestModule
 from mock import Mock, patch
 
-import gcalc
+import reverse
 
-class TestGcalc(TestModule):
+class TestReverse(TestModule):
     def setUp(self):
-        super(TestGcalc, self).setUp()
-        self.gcalc_obj = gcalc.gcalc(self.bot)
+        super(TestReverse, self).setUp()
+        self.reverse_obj = reverse.reverse(self.bot)
 
     def test_init(self):
         pass

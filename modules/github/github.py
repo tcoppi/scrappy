@@ -1,4 +1,4 @@
-from module import Module
+from ..module import Module
 import urllib2
 import json
 import math

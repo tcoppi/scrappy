@@ -84,7 +84,8 @@ class DecodingLineBuffer(LineBuffer):
     UnicodeDecodeError: ...
     """
     encoding = 'utf-8'
-    errors = 'strict'
+#    errors = 'strict'
+    errors = 'replace'
 
     def lines(self):
         for line in super(DecodingLineBuffer, self).lines():

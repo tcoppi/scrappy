@@ -1,12 +1,12 @@
 from ..test_module import TestModule
 from mock import Mock, patch
 
-import gcalc
+import todo
 
-class TestGcalc(TestModule):
+class TestTodo(TestModule):
     def setUp(self):
-        super(TestGcalc, self).setUp()
-        self.gcalc_obj = gcalc.gcalc(self.bot)
+        super(TestTodo, self).setUp()
+        self.todo_obj = todo.todo(self.bot)
 
     def test_init(self):
         pass

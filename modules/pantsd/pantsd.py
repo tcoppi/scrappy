@@ -1,6 +1,7 @@
-from module import Module, DBModel
+from ..module import Module
+from ..dbmodel import DBModel
 
-from utility.user.user import get_account, Account
+from ..utility.user.user import get_account, Account
 
 import peewee
 
@@ -19,10 +20,7 @@ class pantsd(Module):
 
     def pants(self, server, event, bot):
 
-        acct = get_account(event.source, server.server_name)
-        if acct == None:
-            server.privmsg(event.target, "%s, sorry, but you don't have an account." % event.source.nick)
-            return
+        acct = get_account(server.users[event.source.nick], server.server_name)
         if len(event.arg) > 0:
             status = event.arg[0].lower()
             if status not in ("on","off"):

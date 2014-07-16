@@ -14,7 +14,8 @@ import logging
 
 import peewee
 
-from module import Module, DBModel
+from ..module import Module
+from ..dbmodel import DBModel
 
 logging.getLogger('peewee').setLevel("WARNING")
 class Chain(DBModel):
@@ -27,7 +28,6 @@ class markov(Module):
         super(markov, self).__init__(scrap)
         self.delay_mean = 10
         self.delay_stdev = 4
-        self.nickmatch = None
         self.statetab = {}
         self.w1 = "\n"
         self.w2 = "\n"
@@ -48,8 +48,6 @@ class markov(Module):
         self.register_cmd("mkstats", self.markov_stats)
         self.register_cmd("mkdelay", self.markov_delay)
 #    scrap.register_event("markov", "msg", tweet)
-
-        self.nickmatch = re.compile(scrap.servers.itervalues().next()['nickname'])
 
 
 
@@ -188,7 +186,9 @@ class markov(Module):
         delay = random.gauss(self.delay_mean, self.delay_stdev)
         self.logger.debug("Reply delay N(%f,%f) is %f" % (self.delay_mean, self.delay_stdev, delay))
 
-        if self.nickmatch.search(event.arguments[0]) and bot.autorep == 1:
+        nickmatch = re.compile(server.get_nickname())
+
+        if nickmatch.search(event.arguments[0]) and bot.autorep == 1:
             counter = 0
             tmp = []
             while len(tmp) <= 2 and counter < 10:

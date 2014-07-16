@@ -1,7 +1,7 @@
-from module import Module
+from ..module import Module
 
-import utility.user.auth.google_oauth as google_oauth
-import utility.user.user as user
+from ..utility.user.auth import google_oauth
+from ..utility.user import user
 
 class auth(Module):
     def __init__(self, scrap):
@@ -13,10 +13,10 @@ class auth(Module):
 
     def auth(self, server, event, bot):
         if len(event.arg) == 0:
-           server.privmsg(event.source.nick, self.authenticator.challenge(event.source, server))
+            server.privmsg(event.source.nick, self.authenticator.challenge(server.users[event.source.nick], server))
 
         elif len(event.arg) == 1:
-            (success, msg) = self.authenticator.respond(event.source, server, event.arg[0])
+            (success, msg) = self.authenticator.respond(server.users[event.source.nick], server, event.arg[0])
             if success:
                 server.privmsg(event.target, msg)
             else:

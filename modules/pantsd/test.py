@@ -1,12 +1,12 @@
 from ..test_module import TestModule
 from mock import Mock, patch
 
-import gcalc
+import pantsd
 
-class TestGcalc(TestModule):
+class TestPantsd(TestModule):
     def setUp(self):
-        super(TestGcalc, self).setUp()
-        self.gcalc_obj = gcalc.gcalc(self.bot)
+        super(TestPantsd, self).setUp()
+        self.pantsd_obj = pantsd.pantsd(self.bot)
 
     def test_init(self):
         pass

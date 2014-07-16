@@ -1,12 +1,12 @@
 from ..test_module import TestModule
 from mock import Mock, patch
 
-import gcalc
+import insult
 
-class TestGcalc(TestModule):
+class TestInsult(TestModule):
     def setUp(self):
-        super(TestGcalc, self).setUp()
-        self.gcalc_obj = gcalc.gcalc(self.bot)
+        super(TestInsult, self).setUp()
+        self.insult_obj = insult.insult(self.bot)
 
     def test_init(self):
         pass

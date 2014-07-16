@@ -4,7 +4,7 @@ import threading
 import time
 
 import peewee
-from module import DBModel
+from ..dbmodel import DBModel
 
 
 class Cache(DBModel):

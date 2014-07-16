@@ -1,6 +1,6 @@
 import socket
 
-from module import Module
+from ..module import Module
 
 class dns(Module):
     def __init__(self, scrap):
@@ -28,4 +28,4 @@ class dns(Module):
                     msg = "%s -> %s" % (addr, socket.gethostbyname(addr))
                 except socket.gaierror:
                     msg = "No result for '%s'" % addr
-            server.privmsg(event.target, msg)
+        server.privmsg(event.target, msg)

@@ -1,4 +1,5 @@
-from module import Module, DBModel
+from ..module import Module
+from ..dbmodel import DBModel
 
 import peewee
 

@@ -1,6 +1,6 @@
 # This module implements some URL helpers
 
-from module import Module
+from ..module import Module
 
 import re
 import urllib2

@@ -1,14 +1,12 @@
 import socket
 import cPickle
 
-from module import Module
+from ..module import Module
 
 class factoid(Module):
     def __init__(self, scrap):
         super(factoid, self).__init__(scrap)
         scrap.register_event("all", "msg", self.factoid)
-
-#        self.register_cmd("url", self.url)
 
     def factoid(self, server, event, bot):
         event.tokens = event.arguments[0].split(" ")

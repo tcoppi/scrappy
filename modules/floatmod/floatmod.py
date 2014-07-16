@@ -5,7 +5,7 @@ import sys
 import struct
 import binascii
 
-from module import Module
+from ..module import Module
 
 class floatmod(Module):
     def __init__(self, scrap):

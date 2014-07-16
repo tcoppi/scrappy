@@ -63,7 +63,11 @@ class User(object):
 
     def part(self, channel):
         channel.usercount -= 1
-        del self.channels[channel.name]
+        self.channels.remove(channel)
+
+    def quit(self):
+        for channel in self.channels:
+            self.channels[channel].usercount -= 1
 
     def __str__(self):
         return "%s@%s" % (self.nick, self._host)
@@ -76,7 +80,7 @@ class Channel(object):
     def __init__(self, server, channel_name):
         self.logger = server.logger.getChild(channel_name)
         self.server = server
-        self.name = channel_name
+        self.name = channel_name.lower()
         self.usercount = 0
 
 class ServerState(ircclient.ServerConnection):
@@ -155,10 +159,10 @@ class ServerState(ircclient.ServerConnection):
             user = self.users[nick]
 
             if event.type == "quit":
+                user.quit()
                 for channel in user.channels:
-                    channel.usercount -= 1
-                    if channel.user_count == 0:
-                        del self.channels[channel.name]
+                    if self.channels[channel].usercount == 0:
+                        del self.channels[channel]
                 del self.users[nick]
                 return
 
@@ -173,7 +177,7 @@ class ServerState(ircclient.ServerConnection):
                 user.part(channel)
                 if len(user.channels) == 0:
                     del self.users[user.nick]
-                if channel.user_count == 0:
+                if channel.usercount == 0:
                     del self.channels[channel.name]
 
     def on_namereply(self, server, event, bot):
@@ -181,10 +185,9 @@ class ServerState(ircclient.ServerConnection):
             # Hoping that the namreply is only additive! In theory, we shouldn't have missed any users leaving channels though
             if event.type == "namreply":
                 channel_name = event.arguments[1]
-                try:
-                    channel = self.channels[channel_name]
-                except KeyError:
-                    return #ignore it, we're not in the channel
+                if channel_name not in self.channels:
+                    self.channels[channel_name] = Channel(self, channel_name)
+                channel = self.channels[channel_name]
 
                 nicks = event.arguments[2].strip()
                 for nick in nicks.split(" "):
@@ -232,8 +235,6 @@ class scrappy:
         self.events = {"privmsg":{},
                         "pubmsg":{},
                         "tick":{}}
-
-        sys.path.append(os.path.join(os.getcwd(), "modules"))
 
         # Load these modules before any events occur, since core handles server welcome message
         self.load_module("core")
@@ -347,11 +348,12 @@ class scrappy:
             return self.reload_module(name)
 
         try:
-            package = __import__(name+"."+name)
-            module = getattr(package, name)
+            # from modules.core.core import core
+            module = __import__("modules.%s.%s" % (name, name), globals(), locals(), [name])
+            # Get the class
             cls = getattr(module, name)
         except AttributeError as err:
-            self.logger.exception("Module '%s' not found, make sure %s/%s.py exists." % (name,name,name,name))
+            self.logger.exception("Module '%s' not found, make sure %s/%s.py exists." % (name,name,name))
             raise err
         except ImportError as err:
             self.logger.exception("No such module '%s'." % name)
