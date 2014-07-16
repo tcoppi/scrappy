@@ -1,7 +1,7 @@
 # CARDS AGAINST HUMANITY!
 
 import threading
-from module import Module
+from ..module import Module
 from cards import Cards, add_card, init_db
 
 from cards import Deck

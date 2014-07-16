@@ -4,7 +4,7 @@ import json
 import urllib2
 import HTMLParser
 
-from module import DBModel
+from ..dbmodel import DBModel
 from random import shuffle
 
 JSON_LOCATION = "https://raw.githubusercontent.com/samurailink3/hangouts-against-humanity/master/source/data/cards.js"
