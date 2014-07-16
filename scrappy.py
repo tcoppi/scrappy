@@ -48,8 +48,8 @@ class User(object):
             self.server.whois((self.nick,))
             timeout = 1
             time_spent = 0
-            while self._host is None and time_spent < timeout:
-                time_spent += .01
+            while self._host is None and timeout > 0:
+                timeout -= .01
                 time.sleep(.01)
         return self._host
 
@@ -133,6 +133,13 @@ class ServerState(ircclient.ServerConnection):
 
         #self.channels = [Channel(x) for x in config["channels"].split()]
 
+    # Reply to a PRIVMSG event
+    def reply(self, event, message):
+        if event.type == "privmsg":
+            self.privmsg(event.source.nick, message)
+        elif event.type == "pubmsg":
+            self.privmsg(event.target, message)
+
     def join_defaults(self, server, event, bot):
         if server == self:
             for channel in self.initial_channels:
@@ -182,7 +189,8 @@ class ServerState(ircclient.ServerConnection):
                     self.channels[channel_name] = Channel(self, channel_name)
                 channel = self.channels[channel_name]
 
-                for nick in event.arguments[2].strip().split(" "):
+                nicks = event.arguments[2].strip()
+                for nick in nicks.split(" "):
                     if nick not in self.users:
                         self.users[nick] = User(self, nick)
                     self.users[nick].join(channel)

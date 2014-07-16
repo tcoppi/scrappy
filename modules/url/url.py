@@ -1,42 +1,67 @@
-import socket
-import cPickle
+# This module implements some URL helpers
 
 from ..module import Module
+
+import re
+import urllib2
+import HTMLParser
+
+def is_url(text):
+    return False # TODO: filter non-urls somehow
+
+class TitleParser(HTMLParser.HTMLParser):
+    title = False
+    title_text = "No title found"
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == "title":
+            self.title = True
+
+    def handle_endtag(self, tag):
+        if tag.lower() == "title":
+            self.title = False
+
+    def handle_data(self, data):
+        if self.title:
+            self.title_text = data
 
 class url(Module):
     def __init__(self, scrap):
         super(url, self).__init__(scrap)
-        scrap.register_event("url", "msg", self.distribute)
 
-        self.register_cmd("url", self.url)
+        scrap.register_event("url", "pubmsg", self.distribute)
+        scrap.register_event("url", "pubmsg", self.url_monitor)
 
-    def url(self, server, event, bot):
+        self.register_cmd("urlinfo", self.urlinfo_handler)
 
-        try:
-            with open("urldb", "r+") as fp:
-                db = cPickle.load(fp)
-        except:
-            db = {}
+        self.title_parser = TitleParser()
 
-        if len(event.arg) > 1:
-            identifier = event.arg[0]
-            url = event.arg[1]
-
-            db[identifier] = url
-
-            with open("urldb", "w") as fp:
-                cPickle.dump(db, fp)
-
-        elif len(event.arg) == 1:
-            identifier = event.arg[0]
-            if identifier in db:
-                url = db[identifier]
-            else:
-                server.privmsg(event.target, "This URL isn't in the database!")
-                return
-
-        else:
-            server.privmsg(event.target, "You need to have a url to look up or store!")
+    def url_monitor(self, server, event, bot):
+        tokens = event.arguments[0].split()
+        if tokens[0] == server.cmdchar + "urlinfo":
             return
 
-        server.privmsg(event.target, url)
+        for token in tokens:
+            if is_url(token):
+                self.urlinfo(server, event, token)
+
+
+    def urlinfo_handler(self, server, event, bot):
+        for url in event.arg:
+            self.urlinfo(server, event, url)
+
+    def urlinfo(self, server, event, url):
+        if "://" not in url:
+            url = "http://"+url
+        try:
+            response = urllib2.urlopen(url)
+        except urllib2.URLError as e:
+            server.reply(event, "URL fetch for %s failed: %s" % (url, e.reason))
+            return
+        except ValueError as e:
+            server.reply(event, "URL fetch for %s failed: %s" % (url, e.message))
+            return
+        content = response.read()
+        self.title_parser.feed(content)
+        server.reply(event, "Title: %s" % self.title_parser.title_text)
+        self.title_parser.title_text = "Title not found"

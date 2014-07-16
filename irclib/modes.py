@@ -18,14 +18,14 @@ def parse_channel_modes(mode_string):
 
     The function returns a list of lists with three members: sign,
     mode and argument.  The sign is "+" or "-".  The argument is
-    None if mode isn't one of "b", "k", "l", "v" or "o".
+    None if mode isn't one of "b", "k", "l", "v", "o", "h", or "q".
 
     Example:
 
     >>> parse_channel_modes("+ab-c foo")
     [['+', 'a', None], ['+', 'b', 'foo'], ['-', 'c', None]]
     """
-    return _parse_modes(mode_string, "bklvo")
+    return _parse_modes(mode_string, "bklvohq")
 
 def _parse_modes(mode_string, unary_modes=""):
     """
@@ -49,12 +49,13 @@ def _parse_modes(mode_string, unary_modes=""):
 
     This function never throws an error:
     >>> import random
-    >>> from . import _py2_compat
+    >>> import six
+    >>> unichr = chr if six.PY3 else unichr
     >>> def random_text(min_len = 3, max_len = 80):
     ...     len = random.randint(min_len, max_len)
-    ...     chars_to_choose = [_py2_compat.chr(x) for x in range(0,1024)]
+    ...     chars_to_choose = [unichr(x) for x in range(0,1024)]
     ...     chars = (random.choice(chars_to_choose) for x in range(len))
-    ...     return u''.join(chars)
+    ...     return ''.join(chars)
     >>> def random_texts(min_len = 3, max_len = 80):
     ...     while True:
     ...         yield random_text(min_len, max_len)
