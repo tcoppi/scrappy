@@ -18,13 +18,6 @@ class core(Module):
         self.register_cmd("help", self.help_cmd)
         self.register_cmd("join", self.join_cmd)
         self.register_cmd("reboot", self.reboot_cmd)
-        self.register_cmd("testa", self.test)
-
-    def test(self, server, event, bot):
-        print server.channels
-        for channel in server.channels.values():
-            print channel.users
-
 
     def help_cmd(self, server, event, bot):
         """help - Lists all available commands and their docstrings"""
@@ -57,8 +50,10 @@ class core(Module):
 
         if event.source.nick == "Landon":
             for server in bot.servers:
-                bot.servers[server].quit("BAIL OUT FOR REBOOT!!!")
-            os.execv(bot.argv[0], bot.argv)
+                bot.servers[server].quit("BAIL OUT FOR REBOOT!!!%r}" % bot.argv)
+            print(bot.argv)
+            print(sys.executable)
+            os.execv(sys.executable, bot.argv)
             # Just in case execv fails
             sys.exit(0)
 

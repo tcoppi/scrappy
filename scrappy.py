@@ -3,15 +3,16 @@
 #If this is nice and organized, then writing new modules will be a snap and this
 #file should rarely have to be edited.
 
-import ConfigParser
+import configparser as ConfigParser
 DEFAULT_CONFIG = "default.conf"
-CONFIG_NAME = ".scrappyrc"
+CONFIG_NAME = "scrappyrc"
 
 import logging
 import os, os.path
 import ssl
 import sys
-import thread, threading
+import _thread as thread
+import threading
 import time
 
 from irclib import client as ircclient
@@ -34,55 +35,6 @@ irc_logger.setLevel(logging.INFO)
 
 # State classes
 
-class User(object):
-    def __init__(self, server, nick, host=None):
-        self.server = server
-        self.nick = nick
-        self._host = host
-
-        self.channels = {}
-
-    @property
-    def host(self):
-        if self._host is None:
-            self.server.whois((self.nick,))
-            timeout = 1
-            time_spent = 0
-            while self._host is None and timeout > 0:
-                timeout -= .01
-                time.sleep(.01)
-        return self._host
-
-    @host.setter
-    def host(self, value):
-        self._host = value
-
-    def join(self, channel):
-        channel.usercount += 1
-        self.channels[channel.name] = channel
-
-    def part(self, channel):
-        channel.usercount -= 1
-        self.channels.remove(channel)
-
-    def quit(self):
-        for channel in self.channels:
-            self.channels[channel].usercount -= 1
-
-    def __str__(self):
-        return "%s@%s" % (self.nick, self._host)
-
-    def __repr__(self):
-        return self.__str__()
-
-#TODO: use weakref dictionaries for the users
-class Channel(object):
-    def __init__(self, server, channel_name):
-        self.logger = server.logger.getChild(channel_name)
-        self.server = server
-        self.name = channel_name.lower()
-        self.usercount = 0
-
 class ServerState(ircclient.ServerConnection):
     def __init__(self, name, config, bot, irclibobj):
         super(ServerState, self).__init__(irclibobj)
@@ -97,12 +49,6 @@ class ServerState(ircclient.ServerConnection):
         self.execute_every(1, bot.on_tick, arguments=(self,))
 
         bot.register_event("server-%s"%name,"welcome", self.join_defaults)
-        bot.register_event("server-%s"%name,"join", self.update_channel)
-        bot.register_event("server-%s"%name,"part", self.update_channel)
-        bot.register_event("server-%s"%name,"kick", self.update_channel)
-        bot.register_event("server-%s"%name,"quit", self.update_channel)
-        bot.register_event("server-%s"%name,"namreply", self.on_namereply)
-        bot.register_event("server-%s"%name,"whoisuser", self.on_whoisreply)
 
         if "password" in config:
             password = config["password"]
@@ -118,7 +64,7 @@ class ServerState(ircclient.ServerConnection):
         try:
             self.connect(config["server"], int(config["port"]), config["nickname"], password=password,
                         username=config["username"], ircname=config["realname"], connect_factory=factory)
-        except ircclient.ServerConnectionError, err:
+        except ircclient.ServerConnectionError as err:
             self.logger.exception("Failed to connect on port %s" % (config["port"]))
 
         self.cmdchar = config["cmdchar"]
@@ -145,67 +91,6 @@ class ServerState(ircclient.ServerConnection):
             for channel in self.initial_channels:
                 self.join(channel)
 
-    def update_channel(self, server, event, bot):
-        if server == self:
-            if event.type == "kick":
-                nick = event.arguments[0]
-                host = None
-            elif event.type =="part" or event.type == "join" or event.type == "quit":
-                nick = event.source.nick
-                host = event.source.host
-
-            if nick not in self.users:
-                self.users[nick] = User(self, nick, host)
-            user = self.users[nick]
-
-            if event.type == "quit":
-                user.quit()
-                for channel in user.channels:
-                    if self.channels[channel].usercount == 0:
-                        del self.channels[channel]
-                del self.users[nick]
-                return
-
-            if event.target not in self.channels:
-                self.channels[event.target] = Channel(self, event.target)
-            channel = Channel(self, event.target)
-
-            if event.type == "join":
-                user.join(channel)
-            elif event.type == "part" or event.type == "kick":
-                # TODO: Need to take care of the part when _I_ part a channel, shouldn't track its state anymore
-                user.part(channel)
-                if len(user.channels) == 0:
-                    del self.users[user.nick]
-                if channel.usercount == 0:
-                    del self.channels[channel.name]
-
-    def on_namereply(self, server, event, bot):
-        if server == self:
-            # Hoping that the namreply is only additive! In theory, we shouldn't have missed any users leaving channels though
-            if event.type == "namreply":
-                channel_name = event.arguments[1]
-                if channel_name not in self.channels:
-                    self.channels[channel_name] = Channel(self, channel_name)
-                channel = self.channels[channel_name]
-
-                nicks = event.arguments[2].strip()
-                for nick in nicks.split(" "):
-                    if nick not in self.users:
-                        self.users[nick] = User(self, nick)
-                    self.users[nick].join(channel)
-
-    def on_whoisreply(self, server, event, bot):
-        if server == self:
-            if event.type == "whoisuser":
-                nick = event.arguments[0]
-                host = event.arguments[2]
-                try:
-                    user = self.users[nick]
-                    user.host = host
-                except KeyError:
-                    return # ignore the reply, we don't know about this user
-
 class scrappy:
     """This is our main bot class. Generally, everything past loading/unloading modules is provided
     by external python modules themselves.
@@ -223,7 +108,7 @@ class scrappy:
             self.logger.critical("Error: Configuration file '%s' not found." % CONFIG_NAME)
             self.logger.critical("Copy %s to %s and modify as necessary." % (DEFAULT_CONFIG, CONFIG_NAME))
             sys.exit(1)
-        self.config = ConfigParser.SafeConfigParser()
+        self.config = ConfigParser.ConfigParser()
         self.config.read(CONFIG_NAME)
 
         self.modules = {}

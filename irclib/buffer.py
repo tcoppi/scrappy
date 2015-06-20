@@ -91,11 +91,11 @@ class DecodingLineBuffer(LineBuffer):
         for line in super(DecodingLineBuffer, self).lines():
             try:
                 yield line.decode(self.encoding, self.errors)
-            except UnicodeDecodeError:
-                self.handle_exception()
+            except UnicodeDecodeError as e:
+                self.handle_exception(e)
 
-    def handle_exception(self):
-        raise
+    def handle_exception(self, e):
+        raise e
 
 class LenientDecodingLineBuffer(LineBuffer):
     r"""
